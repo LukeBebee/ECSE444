@@ -72,20 +72,20 @@ int main(void)
 {
   /* USER CODE BEGIN 1 */
 
-	typedef struct KalmanFilter{
-		float q;
-		float r;
-		float x;
-		float k;
-		float p;
+	typedef struct kalman_state{
+		float q; // process noise variance, i.e., E(w^2)
+		float r; // measurement noise variance, i.e., E(v^2)
+		float x; // value
+		float p; // estimation error covariance
+		float k; // kalman gain
 
-	}KalmanFilter;
+	}kalman_state;
 
-	struct KalmanFilter kf1 = {0.1, 0.1, 5.0, 0.0, 0.1};
+	struct kalman_state kstate = {0.1, 0.1, 5.0, 0.0, 0.1};
 	float measurement = 0.0;
 
 	for (int i = 0; i < 5; i++){
-		kalman(&kf1, measurement); // calling kalman
+		kalman(&kstate, measurement); // calling kalman
 		measurement++;
 	}
   /* USER CODE END 1 */
@@ -124,7 +124,6 @@ int main(void)
 	  ITM_Port32(31) = 2;
 
 
-	  //TODO Test Kalman Filter
 
 
 

@@ -28,8 +28,8 @@ kalman:
 	q: S1 process noise variance
 	r: S2 measurement noise variance
 	x: S3 value
-	k: S4 estimation error covariance
-	p: S5 kalman gain
+	p: S4 estimation error covariance
+	k: S5 kalman gain
 	*/
 
 	// Clear FPSCR exception bits that we will be checking later
@@ -41,16 +41,16 @@ kalman:
 
 	// Start Kalman algorithm: *****************************************
 	// p = p + q -- potential overflow
-	VADD.F32 S5, S5, S1
+	VADD.F32 S4, S4, S1
 	// k = p/(p + r)-- potential overflow and div by 0
-	VADD.F32 S4, S5, S2
-	VDIV.F32 S4, S5, S4
+	VADD.F32 S5, S4, S2
+	VDIV.F32 S5, S4, S5
 	// x = x + k*(measurement - x) -- potential overflow and underflow
-	VMLA.F32 S3, S4, S6
+	VMLA.F32 S3, S5, S6
 	// p = (1 - k) * p -- potential overflow and underflow
 	VMOV.F32 S6, #1.0
-	VSUB.F32 S6, S6, S4
-	VMUL.F32 S5, S5, S6
+	VSUB.F32 S6, S6, S5
+	VMUL.F32 S4, S4, S6
 	// End Kalman algorithm ********************************************
 
 
