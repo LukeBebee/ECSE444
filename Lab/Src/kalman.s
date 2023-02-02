@@ -4,7 +4,6 @@
  */
 
 .global kalman
-
 /**
 This assembly file contains a single function (kalman)
 
@@ -14,11 +13,13 @@ This assembly file contains a single function (kalman)
 
 /**
 Kalman function updates values of a Kalman object based on it's current state and a current measurement
-Called with the address of the Kalman object (integer - R0) and the current measurement (single-percision float - S0)
+Called with the address of the kalman_state object (integer - R0) and the current measurement (single-percision float - S0)
+No return value
+FPSCR bits [0,3] cleared at start of function to check for undesired arithmetic conditions
 */
 kalman:
 	// Push and pop non-scratch registers to prevent clobbering (I think that's the term)
-	VPUSH {S1-S6} // Can prevent use of S6 by storing r after calculation and using that, but cannot then use store multiple
+	VPUSH {S1-S6} // S6 will be used for computation, the rest will be to store variables from kalman_state structure
 
 	// Load single precision floating point registers with variables from structure
 	VLDM.F32 R0, {S1-S5}
@@ -57,7 +58,7 @@ kalman:
 
 	// Check for overflow, underflow, division by 0
 	VMRS R1, FPSCR	// R1 has FPSCR contents
-	//MOV R2, #0b1111	// R2 has bits we are checking (this is done on line 39 so no need to actually execute)
+	//MOV R2, #0b1111	// R2 has bits we are checking (this is done on line 38 so no need execute)
 	AND R1, R1, R2	// R1 has the 4 bits that were possibly triggered by the arithmetic operations
 	CMP R1, #0
 	BNE no_store	// If 0, no flags so we continue and store. If not zero, skip over store

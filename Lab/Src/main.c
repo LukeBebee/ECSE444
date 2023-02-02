@@ -17,17 +17,15 @@
   */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
-#include "main.h"
+#include "main.h" // header for main.c
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+// included so we can call CMSIS functions
 #define ARM_MATH_CM4
 #include "arm_math.h"
-
+// including our Assembly file that contains the kalman function
 #include "kalman.h"
-
-#include <stdio.h>
-#include <unistd.h>
 
 /* USER CODE END Includes */
 
@@ -38,7 +36,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define ITM_Port32(n) (*((volatile unsigned long *) (0xE0000000+4*n)))
+#define ITM_Port32(n) (*((volatile unsigned long *) (0xE0000000+4*n))) // for serial wire viewing (SWV) debugging
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -81,13 +79,27 @@ int main(void)
 
 	}kalman_state;
 
+	// Check that calculations work (using table from lab doc)
 	struct kalman_state kstate = {0.1, 0.1, 5.0, 0.1, 0.0};
 	float measurement = 0.0;
-
 	for (int i = 0; i < 5; i++){
 		kalman(&kstate, measurement); // calling kalman
 		measurement++;
 	}
+
+	// Overflow check by adding two max floats (p and q)
+	struct kalman_state kstate_of = {FLT_MAX, 0.1, 5.0, FLT_MAX, 0.0};
+	kalman(&kstate_of, measurement); // kstate_of should remain unchanged
+
+	// Underflow check (p+q+r = max float)
+	struct kalman_state kstate_uf = {0.5, (FLT_MAX - 1.0), 0.5, 0.1, 0.0};
+	kalman(&kstate_uf, measurement); // kstate_uf should remain unchanged
+
+	// Division by 0 check (w/ p+q+r = 0)
+	struct kalman_state kstate_dz = {1.0, -2.0, 5.0, 1.0, 0.0};
+	kalman(&kstate_dz, measurement); // kstate_dz should remain unchanged
+
+
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -119,6 +131,7 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+	//Below is for SWV debugging
 	  ITM_Port32(31) = 1;
 	  //put your code in here for monitoring execution time
 	  ITM_Port32(31) = 2;
