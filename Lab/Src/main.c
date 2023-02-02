@@ -81,7 +81,7 @@ int main(void)
 
 	}kalman_state;
 
-	struct kalman_state kstate = {0.1, 0.1, 5.0, 0.0, 0.1};
+	struct kalman_state kstate = {0.1, 0.1, 5.0, 0.1, 0.0};
 	float measurement = 0.0;
 
 	for (int i = 0; i < 5; i++){

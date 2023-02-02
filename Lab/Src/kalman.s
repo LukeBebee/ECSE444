@@ -34,9 +34,9 @@ kalman:
 
 	// Clear FPSCR exception bits that we will be checking later
 	VMRS R1, FPSCR	// R1 has FPSCR contents
-	MOV R2, 0b1111	// R2 has bits to clear
-	EOR R1, R1, R2	// Clear bits indicated by R2
-	VMSR R1, FPSCR	// Clear FPSCR bits
+	MOV R2, #0b1111	// R2 has bits to clear (overflow, underflow, division by zero, invalid operation)
+	BIC R1, R1, R2	// Clear bits indicated by R2
+	VMSR FPSCR, R1	// Write to FPSCR with cleared bits
 
 
 	// Start Kalman algorithm: *****************************************
@@ -46,6 +46,7 @@ kalman:
 	VADD.F32 S5, S4, S2
 	VDIV.F32 S5, S4, S5
 	// x = x + k*(measurement - x) -- potential overflow and underflow
+	VSUB.F32 S6, S0, S3
 	VMLA.F32 S3, S5, S6
 	// p = (1 - k) * p -- potential overflow and underflow
 	VMOV.F32 S6, #1.0
@@ -57,7 +58,7 @@ kalman:
 	// Check for overflow, underflow, division by 0
 	VMRS R1, FPSCR	// R1 has FPSCR contents
 	//MOV R2, #0b1111	// R2 has bits we are checking (this is done on line 39 so no need to actually execute)
-	ORR R1, R1, R2	// R1 has the 4 bits that were possibly triggered by the arithmetic operations
+	AND R1, R1, R2	// R1 has the 4 bits that were possibly triggered by the arithmetic operations
 	CMP R1, #0
 	BNE no_store	// If 0, no flags so we continue and store. If not zero, skip over store
 
