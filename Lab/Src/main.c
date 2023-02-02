@@ -74,8 +74,8 @@ int main(void)
 		float q; // process noise variance, i.e., E(w^2)
 		float r; // measurement noise variance, i.e., E(v^2)
 		float x; // value
-		float p; // estimation error covariance
-		float k; // kalman gain
+		float p; // estimation error co-variance
+		float k; // Kalman gain
 
 	}kalman_state;
 
