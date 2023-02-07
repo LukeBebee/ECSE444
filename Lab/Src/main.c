@@ -82,25 +82,29 @@ int Kalmanfilter_DSP(float* InputArray, float* OutputArray, kalman_state* kstate
 
 int Kalmanfilter_assembly(float* InputArray, float* OutputArray, kalman_state* kstate, int Length)  {
 	for (int i = 0; i < Length; i++){
-		float measurement = OutputArray[i];
+		float measurement = InputArray[i];
 		if (kalman(kstate, measurement) == -1) {
 			return -1;
 		}
+		// TODO add x to output array
 	}
+	return 0;
+}
 
 int Kalmanfilter_C(float* InputArray, float* OutputArray, kalman_state* kstate, int Length)  {
 // TODO overflow checks
-	int result = 0;
 	for (int i = 0; i < Length; i++){
-		float measurement = OutputArray[i];
+		float measurement = InputArray[i];
 
 		kstate->p = kstate->p + kstate->q;
 		kstate->k = kstate->p / (kstate->p +kstate->r);
 		kstate->x = kstate->x + (kstate->k * (measurement - kstate->x));
 		kstate->p = (1.0 - kstate->k) * kstate->p;
 
+		// TODO if anything overflows etc, return -1
+		// TODO add x to output array
 	}
-	return result;
+	return 0;
 }
 
 int Kalmanfilter_DSP(float* InputArray, float* OutputArray, kalman_state* kstate, int Length)  {
@@ -108,7 +112,7 @@ int Kalmanfilter_DSP(float* InputArray, float* OutputArray, kalman_state* kstate
 	int result = 0;
 	float temp = 0;
 	for (int i = 0; i < Length; i++){
-		float measurement = OutputArray[i];
+		float measurement = InputArray[i];
 
 		arm_add_f32(kstate->p, kstate->q, kstate->p, 1);
 
@@ -121,7 +125,7 @@ int Kalmanfilter_DSP(float* InputArray, float* OutputArray, kalman_state* kstate
 
 		arm_sub_f32(1.0, kstate->k, temp, 1);
 		arm_mult_f32(temp, kstate->p, kstate->p, 1);
-
+		// TODO add x to output array
 	}
 	return result;
 }
