@@ -67,12 +67,12 @@ typedef struct kalman_state{
 
 
 /**
- *
+ * Wrapper function to test code
+ * Can call the assembly, plan C, or CMSIS-DSP
  */
-int Kalmanfilter(float* InputArray, float* OutputArray, kalman_state* kstate, int Length);
-
-
-
+int Kalmanfilter_assembly(float* InputArray, float* OutputArray, kalman_state* kstate, int Length);
+int Kalmanfilter_C(float* InputArray, float* OutputArray, kalman_state* kstate, int Length);
+int Kalmanfilter_DSP(float* InputArray, float* OutputArray, kalman_state* kstate, int Length);
 
 
 /* USER CODE END PFP */
@@ -80,9 +80,61 @@ int Kalmanfilter(float* InputArray, float* OutputArray, kalman_state* kstate, in
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-int Kalmanfilter(float* InputArray, float* OutputArray, kalman_state* kstate, int Length)  {
-	return 0;
+int Kalmanfilter_assembly(float* InputArray, float* OutputArray, kalman_state* kstate, int Length)  {
+	for (int i = 0; i < Length; i++){
+		float measurement = OutputArray[i];
+		if (kalman(kstate, measurement) == -1) {
+			return -1;
+		}
+	}
+
+int Kalmanfilter_C(float* InputArray, float* OutputArray, kalman_state* kstate, int Length)  {
+// TODO overflow checks
+	int result = 0;
+	for (int i = 0; i < Length; i++){
+		float measurement = OutputArray[i];
+
+		kstate->p = kstate->p + kstate->q;
+		kstate->k = kstate->p / (kstate->p +kstate->r);
+		kstate->x = kstate->x + (kstate->k * (measurement - kstate->x));
+		kstate->p = (1.0 - kstate->k) * kstate->p;
+
+	}
+	return result;
 }
+
+int Kalmanfilter_DSP(float* InputArray, float* OutputArray, kalman_state* kstate, int Length)  {
+// TODO overflow checks and check if this even works
+	int result = 0;
+	float temp = 0;
+	for (int i = 0; i < Length; i++){
+		float measurement = OutputArray[i];
+
+		arm_add_f32(kstate->p, kstate->q, kstate->p, 1);
+
+		arm_add_f32(kstate->p, kstate->r, kstate->k, 1);
+		arm_div_f32(kstate->p, kstate->k, kstate->k, 1);
+
+		arm_sub_f32(measurement, kstate->x, temp, 1);
+		arm_mult_f32(kstate->k, temp, temp, 1);
+		arm_add_f32(kstate->x, temp, kstate->x, 1);
+
+		arm_sub_f32(1.0, kstate->k, temp, 1);
+		arm_mult_f32(temp, kstate->p, kstate->p, 1);
+
+	}
+	return result;
+}
+
+
+
+
+
+// TODO Subtraction of original and data obtained by Kalman filter tracking.
+// TODO Calculation of the standard deviation and the average of the difference obtained in a).
+// TODO Calculation of the correlation between the original and tracked vectors.
+// TODO Calculation of the convolution between the two vectors.
+
 
 
 /* USER CODE END 0 */
@@ -97,25 +149,43 @@ int main(void)
 
 
 
-	// Check that calculations work (using table from lab doc)
-	struct kalman_state kstate = {0.1, 0.1, 5.0, 0.1, 0.0};
-	float measurement = 0.0;
-	for (int i = 0; i < 5; i++){
-		kalman(&kstate, measurement); // calling kalman
-		measurement++;
-	}
 
-	// Overflow check by adding two max floats (p and q)
-	struct kalman_state kstate_of = {FLT_MAX, 0.1, 5.0, FLT_MAX, 0.0};
-	kalman(&kstate_of, measurement); // kstate_of should remain unchanged
 
-	// Underflow check (p+q+r = max float)
-	struct kalman_state kstate_uf = {0.5, (FLT_MAX - 1.0), 0.5, 0.1, 0.0};
-	kalman(&kstate_uf, measurement); // kstate_uf should remain unchanged
 
-	// Division by 0 check (w/ p+q+r = 0)
-	struct kalman_state kstate_dz = {1.0, -2.0, 5.0, 1.0, 0.0};
-	kalman(&kstate_dz, measurement); // kstate_dz should remain unchanged
+
+
+
+
+
+
+
+
+
+
+
+
+
+// Below is code from part 1 ---------------------------------------------------------------------------------
+//	// Check that calculations work (using table from lab doc)
+//	struct kalman_state kstate = {0.1, 0.1, 5.0, 0.1, 0.0};
+//	float measurement = 0.0;
+//	for (int i = 0; i < 5; i++){
+//		kalman(&kstate, measurement); // calling kalman
+//		measurement++;
+//	}
+//
+//	// Overflow check by adding two max floats (p and q)
+//	struct kalman_state kstate_of = {FLT_MAX, 0.1, 5.0, FLT_MAX, 0.0};
+//	kalman(&kstate_of, measurement); // kstate_of should remain unchanged
+//
+//	// Underflow check (p+q+r = max float)
+//	struct kalman_state kstate_uf = {0.5, (FLT_MAX - 1.0), 0.5, 0.1, 0.0};
+//	kalman(&kstate_uf, measurement); // kstate_uf should remain unchanged
+//
+//	// Division by 0 check (w/ p+q+r = 0)
+//	struct kalman_state kstate_dz = {1.0, -2.0, 5.0, 1.0, 0.0};
+//	kalman(&kstate_dz, measurement); // kstate_dz should remain unchanged
+// Above is code from part 1 ---------------------------------------------------------------------------------
 
 
   /* USER CODE END 1 */
