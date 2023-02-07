@@ -55,10 +55,35 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 /* USER CODE BEGIN PFP */
 
+typedef struct kalman_state{
+	float q; // process noise variance, i.e., E(w^2)
+	float r; // measurement noise variance, i.e., E(v^2)
+	float x; // value
+	float p; // estimation error co-variance
+	float k; // Kalman gain
+
+}kalman_state;
+
+
+
+/**
+ *
+ */
+int Kalmanfilter(float* InputArray, float* OutputArray, kalman_state* kstate, int Length);
+
+
+
+
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
+int Kalmanfilter(float* InputArray, float* OutputArray, kalman_state* kstate, int Length)  {
+	return 0;
+}
+
 
 /* USER CODE END 0 */
 
@@ -70,14 +95,7 @@ int main(void)
 {
   /* USER CODE BEGIN 1 */
 
-	typedef struct kalman_state{
-		float q; // process noise variance, i.e., E(w^2)
-		float r; // measurement noise variance, i.e., E(v^2)
-		float x; // value
-		float p; // estimation error co-variance
-		float k; // Kalman gain
 
-	}kalman_state;
 
 	// Check that calculations work (using table from lab doc)
 	struct kalman_state kstate = {0.1, 0.1, 5.0, 0.1, 0.0};
