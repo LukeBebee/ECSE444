@@ -67,11 +67,16 @@ typedef struct kalman_state{
 
 
 /**
- * Wrapper function to test code
- * Can call the assembly, plan C, or CMSIS-DSP
+ *
  */
 int Kalmanfilter_assembly(float* InputArray, float* OutputArray, kalman_state* kstate, int Length);
+/**
+ *
+ */
 int Kalmanfilter_C(float* InputArray, float* OutputArray, kalman_state* kstate, int Length);
+/**
+ *
+ */
 int Kalmanfilter_DSP(float* InputArray, float* OutputArray, kalman_state* kstate, int Length);
 
 
@@ -80,35 +85,64 @@ int Kalmanfilter_DSP(float* InputArray, float* OutputArray, kalman_state* kstate
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
+/**
+ * Uses the assembly implementation of kalman to run update the kalman_state for an array of measurement inputs
+ * @Param float* InputArray address of array of measurements
+ * @Param float* OutputArray address of array to load with x values from updatting the kalman_state
+ * @Param kalman_state* kstate is initial state
+ * @Param int Length is the length of InputArray
+ * @Return int 0 if function ran as expected, -1 if error
+ */
 int Kalmanfilter_assembly(float* InputArray, float* OutputArray, kalman_state* kstate, int Length)  {
-	for (int i = 0; i < Length; i++){
+	for (int i = 0; i < Length; i++){ // loop through input array of measurements
 		float measurement = InputArray[i];
-		if (kalman(kstate, measurement) == -1) {
-			return -1;
+		if (kalman(kstate, measurement) == -1) { // run kalman function, check for overflow, underflow, and division by zero
+			return -1; // return -1 if kalman returns -1 (happens if arithmetic condition in computations)
 		}
-		// TODO add x to output array
+		OutputArray[i] = kstate->x; // Add x to output array
 	}
-	return 0;
+	return 0; // return 0 if all goes well
 }
 
+/**
+ * Uses the C implementation of kalman to run update the kalman_state for an array of measurement inputs
+ * @Param float* InputArray address of array of measurements
+ * @Param float* OutputArray address of array to load with x values from updatting the kalman_state
+ * @Param kalman_state* kstate is initial state
+ * @Param int Length is the length of InputArray
+ * @Return int 0 if function ran as expected, -1 if error
+ */
 int Kalmanfilter_C(float* InputArray, float* OutputArray, kalman_state* kstate, int Length)  {
-// TODO overflow checks
-	for (int i = 0; i < Length; i++){
+	for (int i = 0; i < Length; i++){  // loop through input array of measurements
 		float measurement = InputArray[i];
 
+		// kalman arithmetic
 		kstate->p = kstate->p + kstate->q;
 		kstate->k = kstate->p / (kstate->p +kstate->r);
 		kstate->x = kstate->x + (kstate->k * (measurement - kstate->x));
 		kstate->p = (1.0 - kstate->k) * kstate->p;
 
-		// TODO if anything overflows etc, return -1
-		// TODO add x to output array
+		OutputArray[i] = kstate->x; // Add x to output array
 	}
-	return 0;
+		//Checking for overflow, underflow, and division by 0 via checking for inf or NaN
+		if (isnan(kstate->p) || isnan(kstate->k) || isnan(kstate->q) || isnan(kstate->x) || isnan(kstate->r)) {
+			return -1;
+		}
+		if (isinf(kstate->p) || isinf(kstate->k) || isinf(kstate->q) || isinf(kstate->x) || isinf(kstate->r)) {
+			return -1;
+		return 0;
 }
 
-int Kalmanfilter_DSP(float* InputArray, float* OutputArray, kalman_state* kstate, int Length)  {
-// TODO overflow checks and check if this even works
+/**
+ * Uses the CMSIS-DSP implementation of kalman to run update the kalman_state for an array of measurement inputs
+ * @Param float* InputArray address of array of measurements
+ * @Param float* OutputArray address of array to load with x values from updatting the kalman_state
+ * @Param kalman_state* kstate is initial state
+ * @Param int Length is the length of InputArray
+ * @Return int 0 if function ran as expected, -1 if error
+ */
+int Kalmanfilter_CMSIS(float* InputArray, float* OutputArray, kalman_state* kstate, int Length)  {
+// TODO see if this works at all
 	int result = 0;
 	float temp = 0;
 	for (int i = 0; i < Length; i++){
@@ -125,15 +159,27 @@ int Kalmanfilter_DSP(float* InputArray, float* OutputArray, kalman_state* kstate
 
 		arm_sub_f32(1.0, kstate->k, temp, 1);
 		arm_mult_f32(temp, kstate->p, kstate->p, 1);
-		// TODO add x to output array
+
+		OutputArray[i] = kstate->x; // add x to output array
 	}
-	return result;
+	uint32_t flags = 0;
+	arm_and_u32(__get_FPSCR(), 15, flags, 1); // check FPSCR with 0b1111
+	if(flags != 0) {return -1;} // if any flags, return -1
+	return 0; // return 0 if no FPSCR issues
 }
 
 
 
 
+// C implementation for processing filtered data
+// TODO Subtraction of original and data obtained by Kalman filter tracking.
+// TODO Calculation of the standard deviation and the average of the difference obtained in a).
+// TODO Calculation of the correlation between the original and tracked vectors.
+// TODO Calculation of the convolution between the two vectors.
 
+
+
+// CMSIS-DSP implementation for processing filtered data
 // TODO Subtraction of original and data obtained by Kalman filter tracking.
 // TODO Calculation of the standard deviation and the average of the difference obtained in a).
 // TODO Calculation of the correlation between the original and tracked vectors.
