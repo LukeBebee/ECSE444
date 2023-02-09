@@ -14,7 +14,7 @@ This assembly file contains a single function (kalman)
 /**
 Kalman function updates values of a Kalman object based on it's current state and a current measurement
 Called with the address of the kalman_state object (integer - R0) and the current measurement (single-percision float - S0)
-Return int 0 if everything works, -1 if there is error
+Return int 0 if everything works, 1 if there is error
 FPSCR bits [0,3] cleared at start of function to check for undesired arithmetic conditions
 */
 kalman:
@@ -55,7 +55,7 @@ kalman:
 	VMUL.F32 S4, S4, S6
 	// End Kalman algorithm ********************************************
 
-	MOV R3, #-1 // let R4 store output for now, assume error
+	MOV R3, #1 // let R4 store output for now, assume error
 
 	// Check for overflow, underflow, division by 0
 	VMRS R1, FPSCR	// R1 has FPSCR contents
@@ -69,7 +69,7 @@ kalman:
 	MOV R3, #0	// only here if no errors, so return value should be 0
 	no_store:
 
-	MOV R0, R3 	// set output, will be -1 here if we skipped store (in case of error) and 0 if no error
+	MOV R0, R3 	// set output, will be 1 here if we skipped store (in case of error) and 0 if no error
 
 	// Restore non-scratch registers then leave function
 	VPOP {S1-S6}

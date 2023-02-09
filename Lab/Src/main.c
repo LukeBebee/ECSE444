@@ -64,7 +64,14 @@ typedef struct kalman_state{
 
 }kalman_state;
 
-
+typedef struct data_processed{
+//	int length; // length of original measurements and obtained data  -- assume 100 for now
+	float difference[25]; // to hold difference between measurement and x values
+	float standard_deviation[1]; // standard deviation of difference array
+	float average[1]; // average of difference array
+	float convolution[49]; // convolution between measurements and x values
+	float correlation[49]; // correlation between measurements and x values
+}data_processed;
 
 /**
  *
@@ -96,8 +103,8 @@ int Kalmanfilter_DSP(float* InputArray, float* OutputArray, kalman_state* kstate
 int Kalmanfilter_assembly(float* InputArray, float* OutputArray, kalman_state* kstate, int Length)  {
 	for (int i = 0; i < Length; i++){ // loop through input array of measurements
 		float measurement = InputArray[i];
-		if (kalman(kstate, measurement) == -1) { // run kalman function, check for overflow, underflow, and division by zero
-			return -1; // return -1 if kalman returns -1 (happens if arithmetic condition in computations)
+		if (kalman(kstate, measurement) == 1) { // run kalman function, check for overflow, underflow, and division by zero
+			return -1; // return 1 if kalman returns -1 (happens if arithmetic condition in computations)
 		}
 		OutputArray[i] = kstate->x; // Add x to output array
 	}
@@ -128,8 +135,6 @@ int Kalmanfilter_C(float* InputArray, float* OutputArray, kalman_state* kstate, 
 		if (isnan(kstate->p) || isnan(kstate->k) || isnan(kstate->q) || isnan(kstate->x) || isnan(kstate->r)) {
 			return -1;
 		}
-		if (isinf(kstate->p) || isinf(kstate->k) || isinf(kstate->q) || isinf(kstate->x) || isinf(kstate->r)) {
-			return -1;
 		return 0;
 }
 
@@ -141,50 +146,91 @@ int Kalmanfilter_C(float* InputArray, float* OutputArray, kalman_state* kstate, 
  * @Param int Length is the length of InputArray
  * @Return int 0 if function ran as expected, -1 if error
  */
-int Kalmanfilter_CMSIS(float* InputArray, float* OutputArray, kalman_state* kstate, int Length)  {
-// TODO see if this works at all
-	int result = 0;
-	float temp = 0;
-	for (int i = 0; i < Length; i++){
-		float measurement = InputArray[i];
+//int Kalmanfilter_CMSIS(float* InputArray, float* OutputArray, kalman_state* kstate, int Length)  {
+//// TODO see if this works at all
+//	float temp = 0;
+//	for (int i = 0; i < Length; i++){
+//		// get vectors to use CMSIS library
+//		vector measurement = {InputArray[i]};
+//
+//		vector pvector = {kstate->p};
+//		vector qvector = {kstate->q};
+//		vector kvector = {kstate->k};
+//		vector xvector = {kstate->x};
+//		vector rvector = {kstate->r};
+//
+//		// arithmetic
+//		arm_add_f32(pvector, qvector, pvector, 1);
+//
+//		arm_add_f32(pvector, rvector, kvector, 1);
+//		arm_div_f32(pvector, kvector, kvector, 1);
+//
+//		arm_sub_f32(measurement, xvector, temp, 1);
+//		arm_mult_f32(kvector, temp, temp, 1);
+//		arm_add_f32(xvector, temp, xvector, 1);
+//
+//		arm_sub_f32(1.0, kvector, temp, 1);
+//		arm_mult_f32(temp, pvector, pvector, 1);
+//
+//		kstate->p = pvector
+//
+//		OutputArray[i] = kstate->x; // add x to output array
+//	}
+//	uint32_t flags = 0;
+//	arm_and_u32(__get_FPSCR(), 15, flags, 1); // check FPSCR with 0b1111
+//	if(flags != 0) {return -1;} // if any flags, return -1
+//	return 0; // return 0 if no FPSCR issues
+//}
 
-		arm_add_f32(kstate->p, kstate->q, kstate->p, 1);
 
-		arm_add_f32(kstate->p, kstate->r, kstate->k, 1);
-		arm_div_f32(kstate->p, kstate->k, kstate->k, 1);
 
-		arm_sub_f32(measurement, kstate->x, temp, 1);
-		arm_mult_f32(kstate->k, temp, temp, 1);
-		arm_add_f32(kstate->x, temp, kstate->x, 1);
 
-		arm_sub_f32(1.0, kstate->k, temp, 1);
-		arm_mult_f32(temp, kstate->p, kstate->p, 1);
 
-		OutputArray[i] = kstate->x; // add x to output array
-	}
-	uint32_t flags = 0;
-	arm_and_u32(__get_FPSCR(), 15, flags, 1); // check FPSCR with 0b1111
-	if(flags != 0) {return -1;} // if any flags, return -1
-	return 0; // return 0 if no FPSCR issues
+/**
+ * Process data from use of kalman filter using C
+ * @Param data_processed* data structure to put values into
+ * @Param float* original is original measurements
+ * @Param float* x_values  are x values found by kalman
+ * @Param int length is the length of the original and x_values arrays
+ */
+void data_processing_C(data_processed* data, float* original, float* x_values, int length) {
+	// TODO Subtraction of original and data obtained by Kalman filter tracking.
+
+
+	// TODO Calculation of the standard deviation and the average of the difference.
+
+
+	// TODO Calculation of the correlation between the original and tracked vectors.
+
+
+	// TODO Calculation of the convolution between the two vectors.
+
+
+
 }
 
 
+/**
+ * Process data from use of kalman filter using CMSIS functions
+ * @Param data_processed* data structure to put values into
+ * @Param float* original is original measurements
+ * @Param float* x_values  are x values found by kalman
+ * @Param int length is the length of the original and x_values arrays
+ */
+void data_processing_CMSIS(data_processed* data, float* original, float* x_values, int length) {
+	// Subtraction of original and data obtained by Kalman filter tracking.
+	arm_sub_f32(original, x_values, data->difference, length);
 
+	// Calculation of the standard deviation and the average of the difference.
+	arm_std_f32(data->difference, length, data->standard_deviation);
+	arm_mean_f32(data->difference, length, data->average);
 
-// C implementation for processing filtered data
-// TODO Subtraction of original and data obtained by Kalman filter tracking.
-// TODO Calculation of the standard deviation and the average of the difference obtained in a).
-// TODO Calculation of the correlation between the original and tracked vectors.
-// TODO Calculation of the convolution between the two vectors.
+	// Calculation of the correlation between the original and tracked vectors.
+	arm_correlate_f32(original, length, x_values, length, data->correlation);
 
-
-
-// CMSIS-DSP implementation for processing filtered data
-// TODO Subtraction of original and data obtained by Kalman filter tracking.
-// TODO Calculation of the standard deviation and the average of the difference obtained in a).
-// TODO Calculation of the correlation between the original and tracked vectors.
-// TODO Calculation of the convolution between the two vectors.
-
+	// Calculation of the convolution between the two vectors.
+	arm_conv_f32(original, length, x_values, length, data->convolution);
+}
 
 
 /* USER CODE END 0 */
@@ -198,6 +244,43 @@ int main(void)
   /* USER CODE BEGIN 1 */
 
 
+// Below is code for part 2 ---------------------------------------------------------------------------------
+
+	float measurements[] =
+	{
+	-0.665365,
+	-0.329988,
+	0.164465,
+	0.043962,
+	0.295885,
+	-0.643138,
+	0.615203,
+	-0.254512,
+	0.261842,
+	0.014163,
+	0.045181,
+	0.554502,
+	0.198915,
+	0.120703,
+	-0.547104,
+	0.103219,
+	-0.204776,
+	0.107782,
+	-0.105263,
+	0.356157,
+	0.172390,
+	-0.154121,
+	0.134996,
+	0.392204,
+	0.204622};
+
+
+	float x_values_asm[25];
+	struct kalman_state kstate_asm = {0.1, 0.1, 5.0, 0.1, 0.0};
+	Kalmanfilter_assembly(measurements, x_values_asm, &kstate_asm, 25);
+
+	struct data_processed data_asm;
+	data_processing_CMSIS(&data_asm, measurements, x_values_asm, 25);
 
 
 
@@ -210,8 +293,7 @@ int main(void)
 
 
 
-
-
+// Above is code for part 2 ---------------------------------------------------------------------------------
 
 
 
@@ -272,6 +354,7 @@ int main(void)
 	//Below is for SWV debugging
 	  ITM_Port32(31) = 1;
 	  //put your code in here for monitoring execution time
+
 	  ITM_Port32(31) = 2;
 
 
