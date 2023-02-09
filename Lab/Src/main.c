@@ -194,11 +194,24 @@ int Kalmanfilter_C(float* InputArray, float* OutputArray, kalman_state* kstate, 
  * @Param int length is the length of the original and x_values arrays
  */
 void data_processing_C(data_processed* data, float* original, float* x_values, int length) {
-	// TODO Subtraction of original and data obtained by Kalman filter tracking.
+	// Subtraction of original and data obtained by Kalman filter tracking.
+	for (int i = 0; i<length; i++) {
+		data->difference[i] = original[i] - x_values[i];
+	}
 
+	// Calculation of the standard deviation and the average of the difference.
+	int sum = 0;
+	for (int i = 0; i<length; i++) {
+			sum += data->difference[i];
+	}
+	data->average[1] = (sum / length);
 
-	// TODO Calculation of the standard deviation and the average of the difference.
-
+	sum = 0;
+	for (int i = 0; i<length; i++) {
+				sum += (data->difference[i] - data->average[1])*(data->difference[i] - data->average[1]);
+	}
+	sum /= length;
+	data->standard_deviation[1] = sqrt(sum);
 
 	// TODO Calculation of the correlation between the original and tracked vectors.
 
@@ -245,10 +258,10 @@ int main(void)
 
 
 // Below is code for part 2 ---------------------------------------------------------------------------------
-	// TODO add timers, somewhere??
+	// TODO add timers
 
-	// TODO test this stuff
-	float measurements[] =
+	int length = 25;
+	float measurements[length] =
 	{
 	-0.665365,
 	-0.329988,
@@ -277,15 +290,40 @@ int main(void)
 	0.204622};
 
 
+	// Try all 3 implementations of kalman filter (assembly, C, CMSIS) ------------------------------------------------
 	float x_values_asm[25];
 	struct kalman_state kstate_asm = {0.1, 0.1, 5.0, 0.1, 0.0};
-	Kalmanfilter_assembly(measurements, x_values_asm, &kstate_asm, 25);
+	Kalmanfilter_assembly(measurements, x_values_asm, &kstate_asm, length);
 
-	struct data_processed data_asm;
-	data_processing_CMSIS(&data_asm, measurements, x_values_asm, 25);
+	float x_values_C[25];
+	struct kalman_state kstate_C = {0.1, 0.1, 5.0, 0.1, 0.0};
+	Kalmanfilter_C(measurements, x_values_C, &kstate_C, length);
+
+//	float x_values_CMSIS[25];
+//	struct kalman_state kstate_CMSIS = {0.1, 0.1, 5.0, 0.1, 0.0};
+//	Kalmanfilter_CMSIS(measurements, x_values_CMSIS, &kstate_CMSIS, length);
 
 
+	// Try processing data with CMSIS implementation ------------------------------------------------------------------
+	struct data_processed data_asm_CMSIS;
+	data_processing_CMSIS(&data_asm_CMSIS, measurements, x_values_asm, length);
 
+	struct data_processed data_C_CMSIS;
+	data_processing_CMSIS(&data_C_CMSIS, measurements, x_values_C, length);
+
+//	struct data_processed data_CMSIS_CMSIS;
+//	data_processing_CMSIS(&data_CMSIS_CMSIS, measurements, x_values_CMSIS, length);
+
+
+	// Try processing data with C implementation ----------------------------------------------------------------------
+	struct data_processed data_asm_C;
+	data_processing_CMSIS(&data_asm_C, measurements, x_values_asm, length);
+
+	struct data_processed data_C_C;
+	data_processing_CMSIS(&data_C_C, measurements, x_values_C, length);
+
+//	struct data_processed data_CMSIS_C;
+//	data_processing_CMSIS(&data_CMSIS_C, measurements, x_values_CMSIS, length);
 
 
 

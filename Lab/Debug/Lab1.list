@@ -3460,11 +3460,11 @@ int main(void)
  800148c:	b5b0      	push	{r4, r5, r7, lr}
  800148e:	f5ad 7d34 	sub.w	sp, sp, #720	; 0x2d0
  8001492:	af00      	add	r7, sp, #0
-  /* USER CODE BEGIN 1 */
-
 
 // Below is code for part 2 ---------------------------------------------------------------------------------
+	// TODO add timers, somewhere??
 
+	// TODO test this stuff
 	float measurements[] =
  8001494:	4a16      	ldr	r2, [pc, #88]	; (80014f0 <main+0x64>)
  8001496:	f507 731b 	add.w	r3, r7, #620	; 0x26c
