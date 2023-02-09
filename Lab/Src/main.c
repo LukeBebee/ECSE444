@@ -147,7 +147,7 @@ int Kalmanfilter_C(float* InputArray, float* OutputArray, kalman_state* kstate, 
  * @Return int 0 if function ran as expected, -1 if error
  */
 //int Kalmanfilter_CMSIS(float* InputArray, float* OutputArray, kalman_state* kstate, int Length)  {
-//// TODO see if this works at all
+//// TODO fix this somehow
 //	float temp = 0;
 //	for (int i = 0; i < Length; i++){
 //		// get vectors to use CMSIS library
@@ -245,7 +245,9 @@ int main(void)
 
 
 // Below is code for part 2 ---------------------------------------------------------------------------------
+	// TODO add timers, somewhere??
 
+	// TODO test this stuff
 	float measurements[] =
 	{
 	-0.665365,
