@@ -143,50 +143,28 @@ int Kalmanfilter_C(float* InputArray, float* OutputArray, kalman_state* kstate, 
  * @Param float* InputArray address of array of measurements
  * @Param float* OutputArray address of array to load with x values from updatting the kalman_state
  * @Param kalman_state* kstate is initial state
- * @Param int Length is the length of InputArray
- * @Return int 0 if function ran as expected, -1 if error
+ * @Param integer Length is the length of InputArray
+ * @Return integer 0 if function ran as expected, -1 if error
  */
 int Kalmanfilter_CMSIS(float* InputArray, float* OutputArray, kalman_state* kstate, int Length)  {
-// TODO fix this somehow
-	float temp = 0;
-	for (int i = 0; i < Length; i++){
-		// get vectors to use CMSIS library
-		float measurement[1] = {InputArray[i]};
+// TODO add CMSIS stuff somehow
+	for (int i = 0; i < Length; i++){  // loop through input array of measurements
+		float measurement = InputArray[i];
 
-		float pvector[1] = {kstate->p};
-		float qvector[1] = {kstate->q};
-		float kvector[1] = {kstate->k};
-		float xvector[1] = {kstate->x};
-		float rvector[1] = {kstate->r};
+		// kalman arithmetic
+		kstate->p = kstate->p + kstate->q;
+		kstate->k = kstate->p / (kstate->p +kstate->r);
+		kstate->x = kstate->x + (kstate->k * (measurement - kstate->x));
+		kstate->p = (1.0 - kstate->k) * kstate->p;
 
-		float onevector[1] = {1.0};
-
-		float temp[1];
-
-		// arithmetic
-		arm_add_f32(pvector, qvector, pvector, 1);
-
-		arm_add_f32(pvector, rvector, kvector, 1);
-		arm_div_f32(pvector, kvector, kvector, 1);
-
-		arm_sub_f32(measurement, xvector, temp, 1);
-		arm_mult_f32(kvector, temp, temp, 1);
-		arm_add_f32(xvector, temp, xvector, 1);
-
-		arm_sub_f32(onevector, kvector, temp, 1);
-		arm_mult_f32(temp, pvector, pvector, 1);
-
-		kstate->p = pvector[1];
-		kstate->q = qvector[1];
-		kstate->k = kvector[1];
-		kstate->x = xvector[1];
-		kstate->r = rvector[1];
-
-		OutputArray[i] = kstate->x; // add x to output array
+		OutputArray[i] = kstate->x; // Add x to output array
 	}
-
-	if((__get_FPSCR() & 15) == 0) {return 0;} // if no flags, return 0
-	return -1; // return -1 if  FPSCR issues
+		//Checking for overflow, underflow, and division by 0 via checking for inf or NaN
+		if ((__get_FPSCR() & 0x0000000F) != 0) { // if flags, return -1
+			//TODO clear FPSCR?
+			return -1;
+		}
+		return 0; // if no flags, return 0
 }
 
 
@@ -207,9 +185,9 @@ void data_processing_C(data_processed* data, float* original, float* x_values, i
 	}
 
 	// Calculation of the standard deviation and the average of the difference.
-	int sum = 0;
+	float sum = 0;
 	for (int i = 0; i<length; i++) {
-			sum += data->difference[i];
+			sum = sum + data->difference[i];
 	}
 	data->average[1] = (sum / length);
 
@@ -217,14 +195,43 @@ void data_processing_C(data_processed* data, float* original, float* x_values, i
 	for (int i = 0; i<length; i++) {
 				sum += (data->difference[i] - data->average[1])*(data->difference[i] - data->average[1]);
 	}
-	sum /= length;
+	sum = sum /  length;
 	data->standard_deviation[1] = sqrt(sum);
 
+
 	// TODO Calculation of the correlation between the original and tracked vectors.
+		// Calculation of the standard deviation and the average of the measured and obtained data.
+		float x_sum = 0;
+		float original_sum  = 0;
+		for (int i = 0; i<length; i++) {
+			original_sum = original_sum + original[i];
+			x_sum = x_sum + x_values[i];
+		}
+		float original_avg = (original_sum / length);
+		float x_avg = (x_sum / length);
+
+		x_sum = 0;
+		original_sum = 0;
+		for (int i = 0; i<length; i++) {
+			original_sum += (original[i] - original_avg)*(original[i] - original_avg);
+			x_sum += (x_values[i] - x_avg)*(x_values[i] - x_avg);
+		}
+		original_sum = original_sum /  length;
+		x_sum = x_sum /  length;
+		float original_s_d = sqrt(original_sum);
+		float x_s_d = sqrt(x_sum);
+
+	// actually find correlation
+	sum = 0;
+	for (int i = 0; i<length; i++) {
+					sum += (x_values[i] - x_avg)*(original[i] - original_avg);
+		}
+	data->correlation[1] = sum / length;
+
 
 
 	// TODO Calculation of the convolution between the two vectors.
-
+	arm_conv_f32(original, length, x_values, length, data->convolution);
 
 
 }
@@ -318,13 +325,14 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 	//Below is for SWV debugging
-	  ITM_Port32(31) = 1;
-	  //put your code in here for monitoring execution time
+	  // ITM_Port32(31) = 1;
+	  // put your code in here for monitoring execution time
+
+
 
 
 	  // Below is code for part 2 ---------------------------------------------------------------------------------
 	  // -----------------------------------------------------------------------------------------------------------
-	  	// TODO add timers
 
 	  	int length = 25;
 	  	float measurements[25] =
@@ -359,45 +367,49 @@ int main(void)
 	  	// Try all 3 implementations of kalman filter (assembly, C, CMSIS) ------------------------------------------------
 	  	float x_values_asm[25];
 	  	struct kalman_state kstate_asm = {0.1, 0.1, 5.0, 0.1, 0.0};
-	  	Kalmanfilter_assembly(measurements, x_values_asm, &kstate_asm, length);
+	  	ITM_Port32(31) = 1;
+	  	int asm_success = Kalmanfilter_assembly(measurements, x_values_asm, &kstate_asm, length);
+	  	ITM_Port32(31) = 2;
+
 
 	  	float x_values_C[25];
 	  	struct kalman_state kstate_C = {0.1, 0.1, 5.0, 0.1, 0.0};
-	  	Kalmanfilter_C(measurements, x_values_C, &kstate_C, length);
+	  	ITM_Port32(31) = 3;
+	  	int C_success = Kalmanfilter_C(measurements, x_values_C, &kstate_C, length);
+	  	ITM_Port32(31) = 4;
 
 	  	float x_values_CMSIS[25];
 	  	struct kalman_state kstate_CMSIS = {0.1, 0.1, 5.0, 0.1, 0.0};
-	  	Kalmanfilter_CMSIS(measurements, x_values_CMSIS, &kstate_CMSIS, length);
+	  	ITM_Port32(31) = 5;
+	  	int CMSIS_success = Kalmanfilter_CMSIS(measurements, x_values_CMSIS, &kstate_CMSIS, length);
+	  	ITM_Port32(31) = 6;
 
 
 	  	// Try processing data with CMSIS implementation ------------------------------------------------------------------
+	  	ITM_Port32(31) = 7;
 	  	struct data_processed data_asm_CMSIS;
 	  	data_processing_CMSIS(&data_asm_CMSIS, measurements, x_values_asm, length);
-
 	  	struct data_processed data_C_CMSIS;
 	  	data_processing_CMSIS(&data_C_CMSIS, measurements, x_values_C, length);
-
 	  	struct data_processed data_CMSIS_CMSIS;
 	  	data_processing_CMSIS(&data_CMSIS_CMSIS, measurements, x_values_CMSIS, length);
+	  	ITM_Port32(31) = 8;
 
 
 	  	// Try processing data with C implementation ----------------------------------------------------------------------
+	  	ITM_Port32(31) = 9;
 	  	struct data_processed data_asm_C;
-	  	data_processing_CMSIS(&data_asm_C, measurements, x_values_asm, length);
-
+	  	data_processing_C(&data_asm_C, measurements, x_values_asm, length);
 	  	struct data_processed data_C_C;
-	  	data_processing_CMSIS(&data_C_C, measurements, x_values_C, length);
-
+	  	data_processing_C(&data_C_C, measurements, x_values_C, length);
 	  	struct data_processed data_CMSIS_C;
-	  	data_processing_CMSIS(&data_CMSIS_C, measurements, x_values_CMSIS, length);
-
+	  	data_processing_C(&data_CMSIS_C, measurements, x_values_CMSIS, length);
+	  	ITM_Port32(31) = 10;
 
 
 	  // Above is code for part 2 ----------------------------------------------------------------------------------------
 	  // ------------------------------------------------------------------------------------------------------------------
 
-
-	  ITM_Port32(31) = 2;
 
 
 
