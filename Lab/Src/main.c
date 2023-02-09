@@ -146,41 +146,48 @@ int Kalmanfilter_C(float* InputArray, float* OutputArray, kalman_state* kstate, 
  * @Param int Length is the length of InputArray
  * @Return int 0 if function ran as expected, -1 if error
  */
-//int Kalmanfilter_CMSIS(float* InputArray, float* OutputArray, kalman_state* kstate, int Length)  {
-//// TODO fix this somehow
-//	float temp = 0;
-//	for (int i = 0; i < Length; i++){
-//		// get vectors to use CMSIS library
-//		vector measurement = {InputArray[i]};
-//
-//		vector pvector = {kstate->p};
-//		vector qvector = {kstate->q};
-//		vector kvector = {kstate->k};
-//		vector xvector = {kstate->x};
-//		vector rvector = {kstate->r};
-//
-//		// arithmetic
-//		arm_add_f32(pvector, qvector, pvector, 1);
-//
-//		arm_add_f32(pvector, rvector, kvector, 1);
-//		arm_div_f32(pvector, kvector, kvector, 1);
-//
-//		arm_sub_f32(measurement, xvector, temp, 1);
-//		arm_mult_f32(kvector, temp, temp, 1);
-//		arm_add_f32(xvector, temp, xvector, 1);
-//
-//		arm_sub_f32(1.0, kvector, temp, 1);
-//		arm_mult_f32(temp, pvector, pvector, 1);
-//
-//		kstate->p = pvector
-//
-//		OutputArray[i] = kstate->x; // add x to output array
-//	}
-//	uint32_t flags = 0;
-//	arm_and_u32(__get_FPSCR(), 15, flags, 1); // check FPSCR with 0b1111
-//	if(flags != 0) {return -1;} // if any flags, return -1
-//	return 0; // return 0 if no FPSCR issues
-//}
+int Kalmanfilter_CMSIS(float* InputArray, float* OutputArray, kalman_state* kstate, int Length)  {
+// TODO fix this somehow
+	float temp = 0;
+	for (int i = 0; i < Length; i++){
+		// get vectors to use CMSIS library
+		float measurement[1] = {InputArray[i]};
+
+		float pvector[1] = {kstate->p};
+		float qvector[1] = {kstate->q};
+		float kvector[1] = {kstate->k};
+		float xvector[1] = {kstate->x};
+		float rvector[1] = {kstate->r};
+
+		float onevector[1] = {1.0};
+
+		float temp[1];
+
+		// arithmetic
+		arm_add_f32(pvector, qvector, pvector, 1);
+
+		arm_add_f32(pvector, rvector, kvector, 1);
+		arm_div_f32(pvector, kvector, kvector, 1);
+
+		arm_sub_f32(measurement, xvector, temp, 1);
+		arm_mult_f32(kvector, temp, temp, 1);
+		arm_add_f32(xvector, temp, xvector, 1);
+
+		arm_sub_f32(onevector, kvector, temp, 1);
+		arm_mult_f32(temp, pvector, pvector, 1);
+
+		kstate->p = pvector[1];
+		kstate->q = qvector[1];
+		kstate->k = kvector[1];
+		kstate->x = xvector[1];
+		kstate->r = rvector[1];
+
+		OutputArray[i] = kstate->x; // add x to output array
+	}
+
+	if((__get_FPSCR() & 15) == 0) {return 0;} // if no flags, return 0
+	return -1; // return -1 if  FPSCR issues
+}
 
 
 
@@ -256,87 +263,6 @@ int main(void)
 {
   /* USER CODE BEGIN 1 */
 
-
-// Below is code for part 2 ---------------------------------------------------------------------------------
-	// TODO add timers
-
-	int length = 25;
-	float measurements[length] =
-	{
-	-0.665365,
-	-0.329988,
-	0.164465,
-	0.043962,
-	0.295885,
-	-0.643138,
-	0.615203,
-	-0.254512,
-	0.261842,
-	0.014163,
-	0.045181,
-	0.554502,
-	0.198915,
-	0.120703,
-	-0.547104,
-	0.103219,
-	-0.204776,
-	0.107782,
-	-0.105263,
-	0.356157,
-	0.172390,
-	-0.154121,
-	0.134996,
-	0.392204,
-	0.204622};
-
-
-	// Try all 3 implementations of kalman filter (assembly, C, CMSIS) ------------------------------------------------
-	float x_values_asm[25];
-	struct kalman_state kstate_asm = {0.1, 0.1, 5.0, 0.1, 0.0};
-	Kalmanfilter_assembly(measurements, x_values_asm, &kstate_asm, length);
-
-	float x_values_C[25];
-	struct kalman_state kstate_C = {0.1, 0.1, 5.0, 0.1, 0.0};
-	Kalmanfilter_C(measurements, x_values_C, &kstate_C, length);
-
-//	float x_values_CMSIS[25];
-//	struct kalman_state kstate_CMSIS = {0.1, 0.1, 5.0, 0.1, 0.0};
-//	Kalmanfilter_CMSIS(measurements, x_values_CMSIS, &kstate_CMSIS, length);
-
-
-	// Try processing data with CMSIS implementation ------------------------------------------------------------------
-	struct data_processed data_asm_CMSIS;
-	data_processing_CMSIS(&data_asm_CMSIS, measurements, x_values_asm, length);
-
-	struct data_processed data_C_CMSIS;
-	data_processing_CMSIS(&data_C_CMSIS, measurements, x_values_C, length);
-
-//	struct data_processed data_CMSIS_CMSIS;
-//	data_processing_CMSIS(&data_CMSIS_CMSIS, measurements, x_values_CMSIS, length);
-
-
-	// Try processing data with C implementation ----------------------------------------------------------------------
-	struct data_processed data_asm_C;
-	data_processing_CMSIS(&data_asm_C, measurements, x_values_asm, length);
-
-	struct data_processed data_C_C;
-	data_processing_CMSIS(&data_C_C, measurements, x_values_C, length);
-
-//	struct data_processed data_CMSIS_C;
-//	data_processing_CMSIS(&data_CMSIS_C, measurements, x_values_CMSIS, length);
-
-
-
-
-
-
-
-
-
-// Above is code for part 2 ---------------------------------------------------------------------------------
-
-
-
 // Below is code from part 1 ---------------------------------------------------------------------------------
 //	// Check that calculations work (using table from lab doc)
 //	struct kalman_state kstate = {0.1, 0.1, 5.0, 0.1, 0.0};
@@ -395,10 +321,83 @@ int main(void)
 	  ITM_Port32(31) = 1;
 	  //put your code in here for monitoring execution time
 
+
+	  // Below is code for part 2 ---------------------------------------------------------------------------------
+	  // -----------------------------------------------------------------------------------------------------------
+	  	// TODO add timers
+
+	  	int length = 25;
+	  	float measurements[25] =
+	  	{
+	  	-0.665365,
+	  	-0.329988,
+	  	0.164465,
+	  	0.043962,
+	  	0.295885,
+	  	-0.643138,
+	  	0.615203,
+	  	-0.254512,
+	  	0.261842,
+	  	0.014163,
+	  	0.045181,
+	  	0.554502,
+	  	0.198915,
+	  	0.120703,
+	  	-0.547104,
+	  	0.103219,
+	  	-0.204776,
+	  	0.107782,
+	  	-0.105263,
+	  	0.356157,
+	  	0.172390,
+	  	-0.154121,
+	  	0.134996,
+	  	0.392204,
+	  	0.204622};
+
+
+	  	// Try all 3 implementations of kalman filter (assembly, C, CMSIS) ------------------------------------------------
+	  	float x_values_asm[25];
+	  	struct kalman_state kstate_asm = {0.1, 0.1, 5.0, 0.1, 0.0};
+	  	Kalmanfilter_assembly(measurements, x_values_asm, &kstate_asm, length);
+
+	  	float x_values_C[25];
+	  	struct kalman_state kstate_C = {0.1, 0.1, 5.0, 0.1, 0.0};
+	  	Kalmanfilter_C(measurements, x_values_C, &kstate_C, length);
+
+	  	float x_values_CMSIS[25];
+	  	struct kalman_state kstate_CMSIS = {0.1, 0.1, 5.0, 0.1, 0.0};
+	  	Kalmanfilter_CMSIS(measurements, x_values_CMSIS, &kstate_CMSIS, length);
+
+
+	  	// Try processing data with CMSIS implementation ------------------------------------------------------------------
+	  	struct data_processed data_asm_CMSIS;
+	  	data_processing_CMSIS(&data_asm_CMSIS, measurements, x_values_asm, length);
+
+	  	struct data_processed data_C_CMSIS;
+	  	data_processing_CMSIS(&data_C_CMSIS, measurements, x_values_C, length);
+
+	  	struct data_processed data_CMSIS_CMSIS;
+	  	data_processing_CMSIS(&data_CMSIS_CMSIS, measurements, x_values_CMSIS, length);
+
+
+	  	// Try processing data with C implementation ----------------------------------------------------------------------
+	  	struct data_processed data_asm_C;
+	  	data_processing_CMSIS(&data_asm_C, measurements, x_values_asm, length);
+
+	  	struct data_processed data_C_C;
+	  	data_processing_CMSIS(&data_C_C, measurements, x_values_C, length);
+
+	  	struct data_processed data_CMSIS_C;
+	  	data_processing_CMSIS(&data_CMSIS_C, measurements, x_values_CMSIS, length);
+
+
+
+	  // Above is code for part 2 ----------------------------------------------------------------------------------------
+	  // ------------------------------------------------------------------------------------------------------------------
+
+
 	  ITM_Port32(31) = 2;
-
-
-
 
 
 
