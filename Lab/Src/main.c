@@ -66,9 +66,9 @@ typedef struct kalman_state{
 
 typedef struct data_processed{
 //	int length; // length of original measurements and obtained data  -- assume 100 for now
+	float standard_deviation; // standard deviation of difference array
+	float average; // average of difference array
 	float difference[25]; // to hold difference between measurement and x values
-	float standard_deviation[1]; // standard deviation of difference array
-	float average[1]; // average of difference array
 	float convolution[49]; // convolution between measurements and x values
 	float correlation[49]; // correlation between measurements and x values
 }data_processed;
@@ -147,15 +147,27 @@ int Kalmanfilter_C(float* InputArray, float* OutputArray, kalman_state* kstate, 
  * @Return integer 0 if function ran as expected, -1 if error
  */
 int Kalmanfilter_CMSIS(float* InputArray, float* OutputArray, kalman_state* kstate, int Length)  {
-// TODO add CMSIS stuff somehow
 	for (int i = 0; i < Length; i++){  // loop through input array of measurements
 		float measurement = InputArray[i];
+		float temp;
 
 		// kalman arithmetic
-		kstate->p = kstate->p + kstate->q;
-		kstate->k = kstate->p / (kstate->p +kstate->r);
-		kstate->x = kstate->x + (kstate->k * (measurement - kstate->x));
-		kstate->p = (1.0 - kstate->k) * kstate->p;
+		//kstate->p = kstate->p + kstate->q;
+		arm_add_f32(&kstate->p, &kstate->q, &kstate->p, 1);
+
+		//kstate->k = kstate->p / (kstate->p +kstate->r);
+		arm_add_f32(&kstate->p, &kstate->r, &kstate->k, 1);
+		kstate->k = kstate->p/kstate->k;
+
+		//kstate->x = kstate->x + (kstate->k * (measurement - kstate->x));
+		arm_sub_f32(&measurement, &kstate->x, &temp, 1);
+		arm_mult_f32(&kstate->k, &temp, &temp, 1);
+		arm_add_f32(&kstate->x, &temp, &kstate->x, 1);
+
+		//kstate->p = (1.0 - kstate->k) * kstate->p;
+		temp = 1.0;
+		arm_sub_f32(&temp, &kstate->k, &temp, 1);
+		arm_mult_f32(&kstate->p, &temp, &kstate->p, 1);
 
 		OutputArray[i] = kstate->x; // Add x to output array
 	}
@@ -189,51 +201,56 @@ void data_processing_C(data_processed* data, float* original, float* x_values, i
 	for (int i = 0; i<length; i++) {
 			sum = sum + data->difference[i];
 	}
-	data->average[1] = (sum / length);
+	data->average = (sum / length);
 
 	sum = 0;
 	for (int i = 0; i<length; i++) {
-				sum += (data->difference[i] - data->average[1])*(data->difference[i] - data->average[1]);
+				sum += (data->difference[i] - data->average)*(data->difference[i] - data->average);
 	}
 	sum = sum /  length;
-	data->standard_deviation[1] = sqrt(sum);
+	data->standard_deviation = sqrt(sum);
 
 
-	// TODO Calculation of the correlation between the original and tracked vectors.
-		// Calculation of the standard deviation and the average of the measured and obtained data.
-		float x_sum = 0;
-		float original_sum  = 0;
-		for (int i = 0; i<length; i++) {
-			original_sum = original_sum + original[i];
-			x_sum = x_sum + x_values[i];
-		}
-		float original_avg = (original_sum / length);
-		float x_avg = (x_sum / length);
+	// Calculation of the convolution between the two vectors.
+	int conv_length = 2*length - 1; // length of both vectors combined
+	  int i,j,h_start,x_start,x_end;
+	  for (i=0; i<conv_length; i++)
+	  {
+		//x_start = MAX(0,i-length+1);
+	    if(i-length+1 > 0) {x_start = i-length+1;}
+	    else {x_start = 0;}
+	    //x_end   = MIN(i+1,length);
+	    if(i+1 > length) {x_end = length;}
+	    else {x_end = i+1;}
+	    //h_start = MIN(i,length-1);
+	    if(i > length-1) {x_start = length-1;}
+	    else {x_start = i;}
 
-		x_sum = 0;
-		original_sum = 0;
-		for (int i = 0; i<length; i++) {
-			original_sum += (original[i] - original_avg)*(original[i] - original_avg);
-			x_sum += (x_values[i] - x_avg)*(x_values[i] - x_avg);
-		}
-		original_sum = original_sum /  length;
-		x_sum = x_sum /  length;
-		float original_s_d = sqrt(original_sum);
-		float x_s_d = sqrt(x_sum);
+	    for(j=x_start; j<x_end; j++)
+	    {
+	      data->convolution[i] += original[h_start--]*x_values[j];
+	    }
+	  }
 
-	// actually find correlation
-	sum = 0;
-	for (int i = 0; i<length; i++) {
-					sum += (x_values[i] - x_avg)*(original[i] - original_avg);
-		}
-	data->correlation[1] = sum / length;
+	// Calculation of the correlation between the original and tracked vectors.
+	// This is a duplicate of the convolution loop but with one vector backwards in time.
+	  	  for (i=0; i<conv_length; i++)
+	  	  {
+	  		//x_start = MAX(0,i-length+1);
+	  			    if(i-length+1 > 0) {x_start = i-length+1;}
+	  			    else {x_start = 0;}
+	  			    //x_end   = MIN(i+1,length);
+	  			    if(i+1 > length) {x_end = length;}
+	  			    else {x_end = i+1;}
+	  			    //h_start = MIN(i,length-1);
+	  			    if(i > length-1) {x_start = length-1;}
+	  			    else {x_start = i;}
 
-
-
-	// TODO Calculation of the convolution between the two vectors.
-	arm_conv_f32(original, length, x_values, length, data->convolution);
-
-
+	  	    for(j=x_end-1; j<=x_start; j--)
+	  	    {
+	  	      data->correlation[i] += original[h_start--]*x_values[j];
+	  	    }
+	  	  }
 }
 
 
@@ -249,8 +266,8 @@ void data_processing_CMSIS(data_processed* data, float* original, float* x_value
 	arm_sub_f32(original, x_values, data->difference, length);
 
 	// Calculation of the standard deviation and the average of the difference.
-	arm_std_f32(data->difference, length, data->standard_deviation);
-	arm_mean_f32(data->difference, length, data->average);
+	arm_std_f32(data->difference, length, &data->standard_deviation);
+	arm_mean_f32(data->difference, length, &data->average);
 
 	// Calculation of the correlation between the original and tracked vectors.
 	arm_correlate_f32(original, length, x_values, length, data->correlation);
@@ -371,7 +388,6 @@ int main(void)
 	  	int asm_success = Kalmanfilter_assembly(measurements, x_values_asm, &kstate_asm, length);
 	  	ITM_Port32(31) = 2;
 
-
 	  	float x_values_C[25];
 	  	struct kalman_state kstate_C = {0.1, 0.1, 5.0, 0.1, 0.0};
 	  	ITM_Port32(31) = 3;
@@ -405,6 +421,7 @@ int main(void)
 	  	struct data_processed data_CMSIS_C;
 	  	data_processing_C(&data_CMSIS_C, measurements, x_values_CMSIS, length);
 	  	ITM_Port32(31) = 10;
+
 
 
 	  // Above is code for part 2 ----------------------------------------------------------------------------------------
