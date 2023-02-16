@@ -90,6 +90,7 @@ PUTCHAR_PROTOTYPE
 
 /**
  * This function reads the button and switches its status as well as the state of the LED
+ * To use button, hold until LED switches them immediately release
  *
  */
 char readButton(char status) {
@@ -98,8 +99,10 @@ char readButton(char status) {
 
 		status = !status; // switch status
 		HAL_GPIO_TogglePin(myLed_GPIO_Port, myLed_Pin); // switch LED
+
+		MX_ADC1_Init(); // reconfigure ADC based on if we want temp or Vref
 	}
-	HAL_Delay(100);
+	HAL_Delay(700);
 	return status;
 
 }
@@ -206,9 +209,9 @@ int main(void)
 	//ITM_Port32(31) = 1; // Command to track time with SWV Trace Log //TODO this cause an error when building, look into why
 
 
-	status = readButton(status);
+	status = readButton(status); // To use button, hold until LED switches them immediately release
 
-	if (status == 1) { // calculate vref
+	if (status == 0) { // calculate vref
 		v_ref = readVRef();
 		printf("Voltage: %f mV\n", v_ref);
 
@@ -279,7 +282,7 @@ static void MX_ADC1_Init(void)
 {
 
   /* USER CODE BEGIN ADC1_Init 0 */
-
+	char flag = HAL_GPIO_ReadPin(myLed_GPIO_Port, myLed_Pin); // 1 if on, 0 if off
   /* USER CODE END ADC1_Init 0 */
 
   ADC_ChannelConfTypeDef sConfig = {0};
@@ -324,6 +327,24 @@ static void MX_ADC1_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN ADC1_Init 2 */
+
+
+  // Redo configuration based on flag for temperature vs vref
+
+  if (flag == 1) {
+	  sConfig.Channel = ADC_CHANNEL_TEMPSENSOR;
+  } else {
+	  sConfig.Channel = ADC_CHANNEL_VREFINT;
+  }
+  sConfig.Rank = ADC_REGULAR_RANK_1;
+  sConfig.SamplingTime = ADC_SAMPLETIME_2CYCLES_5;
+  sConfig.SingleDiff = ADC_SINGLE_ENDED;
+  sConfig.OffsetNumber = ADC_OFFSET_NONE;
+  sConfig.Offset = 0;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+    {
+      Error_Handler();
+    }
 
   /* USER CODE END ADC1_Init 2 */
 
