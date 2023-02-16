@@ -67,7 +67,7 @@ static void MX_USART2_UART_Init(void);
 /* USER CODE BEGIN PFP */
 char readButton(char status);
 float readVRef();
-float readTemp();
+float readTemp(float v_ref);
 
 #ifdef __GNUC__
 #define PUTCHAR_PROTOTYPE int __io_putchar(int ch)
@@ -130,13 +130,12 @@ float readVRef() {
  * This function calculates the temperature
  *
  */
-float readTemp() {
+float readTemp(float v_ref) {
 	// ADC conversion by polling as per data sheet instructions (pg 104 of HAL driver user manual)
 	HAL_ADC_Start(&hadc1); // pg 107
 	HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY); // pg 142, 69; HAL_MAX_DELAY means infinite poll until successful
 	raw_data = HAL_ADC_GetValue(&hadc1); // pg 110
 	HAL_ADC_Stop(&hadc1); // pg 107
-	float v_ref = readVRef();
 
 	float temp = __HAL_ADC_CALC_TEMPERATURE(v_ref, raw_data, ADC_RESOLUTION_12B);
 
@@ -197,6 +196,11 @@ int main(void)
   printf("Starting program.");
 
 
+  // get v_ref once to be able to get temperature
+  v_ref = readVRef();
+
+
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -216,7 +220,7 @@ int main(void)
 		printf("Voltage: %f mV\n", v_ref);
 
 	} else { // calculate temperature
-		temp = readTemp();
+		temp = readTemp(v_ref);
 		printf("Temperature: %f degrees C\n", temp);
 	}
   }
@@ -316,16 +320,16 @@ static void MX_ADC1_Init(void)
 
   /** Configure Regular Channel
   */
-  sConfig.Channel = ADC_CHANNEL_VREFINT;
-  sConfig.Rank = ADC_REGULAR_RANK_1;
-  sConfig.SamplingTime = ADC_SAMPLETIME_2CYCLES_5;
-  sConfig.SingleDiff = ADC_SINGLE_ENDED;
-  sConfig.OffsetNumber = ADC_OFFSET_NONE;
-  sConfig.Offset = 0;
-  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
+//  sConfig.Channel = ADC_CHANNEL_VREFINT;
+//  sConfig.Rank = ADC_REGULAR_RANK_1;
+//  sConfig.SamplingTime = ADC_SAMPLETIME_2CYCLES_5;
+//  sConfig.SingleDiff = ADC_SINGLE_ENDED;
+//  sConfig.OffsetNumber = ADC_OFFSET_NONE;
+//  sConfig.Offset = 0;
+//  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+//  {
+//    Error_Handler();
+//  }
   /* USER CODE BEGIN ADC1_Init 2 */
 
 
