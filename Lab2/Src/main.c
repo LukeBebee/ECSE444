@@ -21,7 +21,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include <stdio.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -31,6 +31,12 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+// Get calibration values from memory as per documentation
+#define TS_CAL1 ((uint16_t*)((uint32_t) 0x1FFF75A8))
+#define TS_CAL2 ((uint16_t*)((uint32_t) 0x1FFF75CA))
+#define VREFINT ((uint16_t*)((uint32_t) 0x1FFF75AA))
+
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -39,20 +45,104 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+ADC_HandleTypeDef hadc1;
+
+UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
+char status; // keep track of status from button (1 is read temperature, 0 is reference voltage)
+float vref;	// reference voltage
+float temperature;	// temperature
+uint32_t raw_data;	// data from ADC
+
+
 
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
+static void MX_ADC1_Init(void);
+static void MX_USART2_UART_Init(void);
 /* USER CODE BEGIN PFP */
+char readButton(char status);
+float readVRef();
+float readTemp();
+
+#ifdef __GNUC__
+#define PUTCHAR_PROTOTYPE int __io_putchar(int ch)
+#else
+#define PUTCHAR_PROTOTYPE int fputc(int ch, FILE *f)
+#endif
+
+PUTCHAR_PROTOTYPE
+{
+  HAL_UART_Transmit(&huart2, (uint8_t *)&ch, 1, HAL_MAX_DELAY);
+  return ch;
+}
+
+
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
+/**
+ * This function reads the button and switches its status as well as the state of the LED
+ *
+ */
+char readButton(char status) {
+
+	if (HAL_GPIO_ReadPin(userButton_GPIO_Port, userButton_Pin) == 0) { // if button pressed
+
+		status = !status; // switch status
+		HAL_GPIO_TogglePin(myLed_GPIO_Port, myLed_Pin); // switch LED
+	}
+	HAL_Delay(100);
+	return status;
+
+}
+
+/**
+ * This function calculates the reference voltage
+ *
+ */
+float readVRef() {
+	// ADC conversion by polling as per data sheet instructions (pg 104 of HAL driver user manual)
+	HAL_ADC_Start(&hadc1); // pg 107
+	HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY); // pg 142, 69; HAL_MAX_DELAY means infinite poll until successful
+	raw_data = HAL_ADC_GetValue(&hadc1); // pg 110
+	HAL_ADC_Stop(&hadc1); // pg 107
+
+	// calculate v_ref
+	//float v_ref = 3000.0f * (*VREFINT) / raw_data;
+	float v_ref = __HAL_ADC_CALC_VREFANALOG_VOLTAGE(raw_data, ADC_RESOLUTION_12B);
+
+	return v_ref;
+
+}
+
+/**
+ * This function calculates the temperature
+ *
+ */
+float readTemp() {
+	// ADC conversion by polling as per data sheet instructions (pg 104 of HAL driver user manual)
+	HAL_ADC_Start(&hadc1); // pg 107
+	HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY); // pg 142, 69; HAL_MAX_DELAY means infinite poll until successful
+	raw_data = HAL_ADC_GetValue(&hadc1); // pg 110
+	HAL_ADC_Stop(&hadc1); // pg 107
+	float v_ref = readVRef();
+
+	float temp = __HAL_ADC_CALC_TEMPERATURE(v_ref, raw_data, ADC_RESOLUTION_12B);
+
+	return temp;
+}
+
+
+
+
 
 /* USER CODE END 0 */
 
@@ -63,6 +153,12 @@ static void MX_GPIO_Init(void);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
+
+  float v_ref;
+  float temp;
+
+
+
 
   /* USER CODE END 1 */
 
@@ -84,8 +180,20 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_ADC1_Init();
+  MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
-  char status = 0;
+
+  status = 0; // initially 0 (reference voltage)
+  HAL_GPIO_WritePin(myLed_GPIO_Port, myLed_Pin, GPIO_PIN_RESET); // initially LED off (to match status)
+
+
+  HAL_ADCEx_Calibration_Start(&hadc1, ADC_SINGLE_ENDED); // pg 104 optional instruction to improve accuracy **note that hadc1 is generated handle for ADC
+
+
+  printf("Starting program.");
+
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -95,27 +203,19 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	ITM_Port32(31) = 1; // Command to track time with SWV Trace Log
-
-	// Part One: push button turns on LED
-	// COMPLETE
-	status = HAL_GPIO_ReadPin(myButton_GPIO_Port, myButton_Pin);
-	if (status == 0)
-	HAL_GPIO_WritePin(myLed_GPIO_Port, myLed_Pin, GPIO_PIN_SET);
-	else
-	HAL_GPIO_WritePin(myLed_GPIO_Port, myLed_Pin, GPIO_PIN_RESET);
+	//ITM_Port32(31) = 1; // Command to track time with SWV Trace Log //TODO this cause an error when building, look into why
 
 
-	// Part Two: read voltage reference
+	status = readButton(status);
 
+	if (status == 1) { // calculate vref
+		v_ref = readVRef();
+		printf("Voltage: %f mV\n", v_ref);
 
-
-	// Part Three: read temperature sensor
-
-
-	// Part Four: put it all together
-
-
+	} else { // calculate temperature
+		temp = readTemp();
+		printf("Temperature: %f degrees C\n", temp);
+	}
   }
   /* USER CODE END 3 */
 }
@@ -171,6 +271,113 @@ void SystemClock_Config(void)
 }
 
 /**
+  * @brief ADC1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_ADC1_Init(void)
+{
+
+  /* USER CODE BEGIN ADC1_Init 0 */
+
+  /* USER CODE END ADC1_Init 0 */
+
+  ADC_ChannelConfTypeDef sConfig = {0};
+
+  /* USER CODE BEGIN ADC1_Init 1 */
+
+  /* USER CODE END ADC1_Init 1 */
+
+  /** Common config
+  */
+  hadc1.Instance = ADC1;
+  hadc1.Init.ClockPrescaler = ADC_CLOCK_ASYNC_DIV1;
+  hadc1.Init.Resolution = ADC_RESOLUTION_12B;
+  hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
+  hadc1.Init.ScanConvMode = ADC_SCAN_DISABLE;
+  hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
+  hadc1.Init.LowPowerAutoWait = DISABLE;
+  hadc1.Init.ContinuousConvMode = DISABLE;
+  hadc1.Init.NbrOfConversion = 1;
+  hadc1.Init.DiscontinuousConvMode = DISABLE;
+  hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
+  hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
+  hadc1.Init.DMAContinuousRequests = DISABLE;
+  hadc1.Init.Overrun = ADC_OVR_DATA_PRESERVED;
+  hadc1.Init.OversamplingMode = DISABLE;
+  hadc1.Init.DFSDMConfig = ADC_DFSDM_MODE_ENABLE;
+  if (HAL_ADC_Init(&hadc1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure Regular Channel
+  */
+  sConfig.Channel = ADC_CHANNEL_VREFINT;
+  sConfig.Rank = ADC_REGULAR_RANK_1;
+  sConfig.SamplingTime = ADC_SAMPLETIME_2CYCLES_5;
+  sConfig.SingleDiff = ADC_SINGLE_ENDED;
+  sConfig.OffsetNumber = ADC_OFFSET_NONE;
+  sConfig.Offset = 0;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN ADC1_Init 2 */
+
+  /* USER CODE END ADC1_Init 2 */
+
+}
+
+/**
+  * @brief USART2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART2_UART_Init(void)
+{
+
+  /* USER CODE BEGIN USART2_Init 0 */
+
+  /* USER CODE END USART2_Init 0 */
+
+  /* USER CODE BEGIN USART2_Init 1 */
+
+  /* USER CODE END USART2_Init 1 */
+  huart2.Instance = USART2;
+  huart2.Init.BaudRate = 115200;
+  huart2.Init.WordLength = UART_WORDLENGTH_8B;
+  huart2.Init.StopBits = UART_STOPBITS_1;
+  huart2.Init.Parity = UART_PARITY_NONE;
+  huart2.Init.Mode = UART_MODE_TX_RX;
+  huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart2.Init.OverSampling = UART_OVERSAMPLING_16;
+  huart2.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+  huart2.Init.ClockPrescaler = UART_PRESCALER_DIV1;
+  huart2.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+  if (HAL_UART_Init(&huart2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_UARTEx_SetTxFifoThreshold(&huart2, UART_TXFIFO_THRESHOLD_1_8) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_UARTEx_SetRxFifoThreshold(&huart2, UART_RXFIFO_THRESHOLD_1_8) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_UARTEx_DisableFifoMode(&huart2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART2_Init 2 */
+
+  /* USER CODE END USART2_Init 2 */
+
+}
+
+/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
@@ -187,11 +394,11 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(myLed_GPIO_Port, myLed_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pin : myButton_Pin */
-  GPIO_InitStruct.Pin = myButton_Pin;
+  /*Configure GPIO pins : userButton_Pin resetButton_Pin */
+  GPIO_InitStruct.Pin = userButton_Pin|resetButton_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(myButton_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
   /*Configure GPIO pin : myLed_Pin */
   GPIO_InitStruct.Pin = myLed_Pin;
