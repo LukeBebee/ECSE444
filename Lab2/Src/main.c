@@ -31,7 +31,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-// Get calibration values from memory as per documentation
+// Get calibration values from memory as per documentation (pg 44 of datasheet)
 #define TS_CAL1 ((uint16_t*)((uint32_t) 0x1FFF75A8))
 #define TS_CAL2 ((uint16_t*)((uint32_t) 0x1FFF75CA))
 #define VREFINT ((uint16_t*)((uint32_t) 0x1FFF75AA))
@@ -51,10 +51,7 @@ UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
 char status; // keep track of status from button (1 is read temperature, 0 is reference voltage)
-float vref;	// reference voltage
-float temperature;	// temperature
 uint32_t raw_data;	// data from ADC
-
 
 
 /* USER CODE END PV */
@@ -65,10 +62,14 @@ static void MX_GPIO_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_USART2_UART_Init(void);
 /* USER CODE BEGIN PFP */
+// functions for lab 2
 char readButton(char status);
 float readVRef();
 float readTemp(float v_ref);
+static void MX_ADC1_Reinit(void);
 
+
+// UART stuff for printf
 #ifdef __GNUC__
 #define PUTCHAR_PROTOTYPE int __io_putchar(int ch)
 #else
@@ -100,7 +101,7 @@ char readButton(char status) {
 		status = !status; // switch status
 		HAL_GPIO_TogglePin(myLed_GPIO_Port, myLed_Pin); // switch LED
 
-		MX_ADC1_Init(); // reconfigure ADC based on if we want temp or Vref
+		MX_ADC1_Reinit(); // reconfigure ADC based on if we want temp or Vref
 	}
 	HAL_Delay(700);
 	return status;
@@ -113,14 +114,14 @@ char readButton(char status) {
  */
 float readVRef() {
 	// ADC conversion by polling as per data sheet instructions (pg 104 of HAL driver user manual)
-	HAL_ADC_Start(&hadc1); // pg 107
-	HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY); // pg 142, 69; HAL_MAX_DELAY means infinite poll until successful
-	raw_data = HAL_ADC_GetValue(&hadc1); // pg 110
-	HAL_ADC_Stop(&hadc1); // pg 107
+	HAL_ADC_Start(&hadc1); // pg 107 of HAL driver manual
+	while (HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY) != HAL_OK) {} // pg 142, 69 107 of HAL driver manual; HAL_MAX_DELAY means infinite poll until successful
+	raw_data = HAL_ADC_GetValue(&hadc1); // pg 110 107 of HAL driver manual
+	HAL_ADC_Stop(&hadc1); // pg 107 107 of HAL driver manual
 
 	// calculate v_ref
 	//float v_ref = 3000.0f * (*VREFINT) / raw_data;
-	float v_ref = __HAL_ADC_CALC_VREFANALOG_VOLTAGE(raw_data, ADC_RESOLUTION_12B);
+	float v_ref = __HAL_ADC_CALC_VREFANALOG_VOLTAGE(raw_data, ADC_RESOLUTION_12B); // pg 129 of HAL driver manual
 
 	return v_ref;
 
@@ -132,17 +133,37 @@ float readVRef() {
  */
 float readTemp(float v_ref) {
 	// ADC conversion by polling as per data sheet instructions (pg 104 of HAL driver user manual)
-	HAL_ADC_Start(&hadc1); // pg 107
-	HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY); // pg 142, 69; HAL_MAX_DELAY means infinite poll until successful
-	raw_data = HAL_ADC_GetValue(&hadc1); // pg 110
-	HAL_ADC_Stop(&hadc1); // pg 107
+	HAL_ADC_Start(&hadc1); // pg 107 of HAL driver manual
+	while (HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY) != HAL_OK) {} // pg 142, 69 107 of HAL driver manual; HAL_MAX_DELAY means infinite poll until successful
+	raw_data = HAL_ADC_GetValue(&hadc1); // pg 110 107 of HAL driver manual
+	HAL_ADC_Stop(&hadc1); // pg 107 107 of HAL driver manual
 
-	float temp = __HAL_ADC_CALC_TEMPERATURE(v_ref, raw_data, ADC_RESOLUTION_12B);
+
+
+	// TS_CAL1 taken @ 30 degrees C and TS_CAL2 taken @ 130 degrees C, both w/ Vref = 3.0 (pg 44 of datasheet)
+	// Hence (130.0 - 30.0) and (3.3/3.0)
+	// Equation from page 689 of long datasheet
+	float temp = ((130.0 - 30.0)/(*TS_CAL2 - *TS_CAL1)) * ((3.3/3.0)*raw_data - (int) *TS_CAL1) + 30.0;
+
 
 	return temp;
 }
 
 
+static void MX_ADC1_Reinit(void){
+	ADC_ChannelConfTypeDef sConfig = {0};
+	// Check status to reinitialize to
+	status = HAL_GPIO_ReadPin(myLed_GPIO_Port, myLed_Pin); // 1 if on, 0 if off
+
+
+	// configure to correct ADC channel
+	if (status == 1) {
+		sConfig.Channel = ADC_CHANNEL_TEMPSENSOR;
+	} else {
+		sConfig.Channel = ADC_CHANNEL_VREFINT;
+	}
+
+}
 
 
 
@@ -183,6 +204,7 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_ADC1_Init();
+  MX_ADC1_Reinit(); // should do nothing but removes warning from compiler
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
 
@@ -286,7 +308,7 @@ static void MX_ADC1_Init(void)
 {
 
   /* USER CODE BEGIN ADC1_Init 0 */
-	char flag = HAL_GPIO_ReadPin(myLed_GPIO_Port, myLed_Pin); // 1 if on, 0 if off
+	status = HAL_GPIO_ReadPin(myLed_GPIO_Port, myLed_Pin); // 1 if on, 0 if off
   /* USER CODE END ADC1_Init 0 */
 
   ADC_ChannelConfTypeDef sConfig = {0};
@@ -320,35 +342,19 @@ static void MX_ADC1_Init(void)
 
   /** Configure Regular Channel
   */
-//  sConfig.Channel = ADC_CHANNEL_VREFINT;
-//  sConfig.Rank = ADC_REGULAR_RANK_1;
-//  sConfig.SamplingTime = ADC_SAMPLETIME_2CYCLES_5;
-//  sConfig.SingleDiff = ADC_SINGLE_ENDED;
-//  sConfig.OffsetNumber = ADC_OFFSET_NONE;
-//  sConfig.Offset = 0;
-//  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
-//  {
-//    Error_Handler();
-//  }
-  /* USER CODE BEGIN ADC1_Init 2 */
-
-
-  // Redo configuration based on flag for temperature vs vref
-
-  if (flag == 1) {
-	  sConfig.Channel = ADC_CHANNEL_TEMPSENSOR;
-  } else {
-	  sConfig.Channel = ADC_CHANNEL_VREFINT;
-  }
+  sConfig.Channel = ADC_CHANNEL_VREFINT;
   sConfig.Rank = ADC_REGULAR_RANK_1;
-  sConfig.SamplingTime = ADC_SAMPLETIME_2CYCLES_5;
+  sConfig.SamplingTime = ADC_SAMPLETIME_92CYCLES_5;
   sConfig.SingleDiff = ADC_SINGLE_ENDED;
   sConfig.OffsetNumber = ADC_OFFSET_NONE;
   sConfig.Offset = 0;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
-    {
-      Error_Handler();
-    }
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN ADC1_Init 2 */
+
+
 
   /* USER CODE END ADC1_Init 2 */
 
