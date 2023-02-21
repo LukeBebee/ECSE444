@@ -129,12 +129,16 @@ float readVRef() {
 	return v_ref;
 }
 
+/**
+ * This function reinitializes the ADC for reading VRef
+ *
+ */
 void set_vref() {
 	ADC_ChannelConfTypeDef sConfig = {0};
 
 	sConfig.Channel = ADC_CHANNEL_VREFINT;
 	sConfig.Rank = ADC_REGULAR_RANK_1;
-	sConfig.SamplingTime = ADC_SAMPLETIME_2CYCLES_5;
+	sConfig.SamplingTime = ADC_SAMPLETIME_12CYCLES_5;
 	sConfig.SingleDiff = ADC_SINGLE_ENDED;
 	sConfig.OffsetNumber = ADC_OFFSET_NONE;
 	sConfig.Offset = 0;
@@ -165,12 +169,16 @@ float readTemp(float v_ref) {
 	return temp;
 }
 
+/**
+ * This function reinitializes the ADC for reading temp
+ *
+ */
 void set_temp() {
 	ADC_ChannelConfTypeDef sConfig = {0};
 
 	sConfig.Channel = ADC_CHANNEL_TEMPSENSOR;
 	sConfig.Rank = ADC_REGULAR_RANK_1;
-	sConfig.SamplingTime = ADC_SAMPLETIME_92CYCLES_5;
+	sConfig.SamplingTime = ADC_SAMPLETIME_640CYCLES_5; // max for accuracy improvement
 	sConfig.SingleDiff = ADC_SINGLE_ENDED;
 	sConfig.OffsetNumber = ADC_OFFSET_NONE;
 	sConfig.Offset = 0;
@@ -373,7 +381,7 @@ static void MX_ADC1_Init(void)
   */
   sConfig.Channel = ADC_CHANNEL_VREFINT;
   sConfig.Rank = ADC_REGULAR_RANK_1;
-  sConfig.SamplingTime = ADC_SAMPLETIME_2CYCLES_5;
+  sConfig.SamplingTime = ADC_SAMPLETIME_12CYCLES_5;
   sConfig.SingleDiff = ADC_SINGLE_ENDED;
   sConfig.OffsetNumber = ADC_OFFSET_NONE;
   sConfig.Offset = 0;
