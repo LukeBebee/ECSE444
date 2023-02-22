@@ -66,9 +66,8 @@ static void MX_USART2_UART_Init(void);
 char readButton(char status);
 float readVRef();
 float readTemp(float v_ref);
-static void MX_ADC1_Reinit(void);
-void set_vref(void);
-void set_temp(void);
+void ADC_reconfig_vref(void);
+void ADC_reconfig_temp(void);
 
 
 // UART stuff for printf
@@ -114,8 +113,6 @@ char readButton(char status) {
  *
  */
 float readVRef() {
-	set_vref();
-
 	// ADC conversion by polling as per data sheet instructions (pg 104 of HAL driver user manual)
 	HAL_ADC_Start(&hadc1); // pg 107 of HAL driver manual
 	while (HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY) != HAL_OK) {} // pg 142, 69 107 of HAL driver manual; HAL_MAX_DELAY means infinite poll until successful
@@ -133,15 +130,11 @@ float readVRef() {
  * This function reinitializes the ADC for reading VRef
  *
  */
-void set_vref() {
+void ADC_reconfig_vref() {
 	ADC_ChannelConfTypeDef sConfig = {0};
 
 	sConfig.Channel = ADC_CHANNEL_VREFINT;
-	sConfig.Rank = ADC_REGULAR_RANK_1;
 	sConfig.SamplingTime = ADC_SAMPLETIME_12CYCLES_5;
-	sConfig.SingleDiff = ADC_SINGLE_ENDED;
-	sConfig.OffsetNumber = ADC_OFFSET_NONE;
-	sConfig.Offset = 0;
 	if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
 	{
 	  Error_Handler();
@@ -153,8 +146,6 @@ void set_vref() {
  *
  */
 float readTemp(float v_ref) {
-	set_temp();
-
 	// ADC conversion by polling as per data sheet instructions (pg 104 of HAL driver user manual)
 	HAL_ADC_Start(&hadc1); // pg 107 of HAL driver manual
 	while (HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY) != HAL_OK) {} // pg 142, 69 107 of HAL driver manual; HAL_MAX_DELAY means infinite poll until successful
@@ -166,6 +157,7 @@ float readTemp(float v_ref) {
 	// Equation from page 689 of long datasheet
 	float temp = ((130.0 - 30.0)/(*TS_CAL2 - *TS_CAL1)) * ((3.3/3.0)*raw_data - (int) *TS_CAL1) + 30.0;
 
+
 	return temp;
 }
 
@@ -173,35 +165,16 @@ float readTemp(float v_ref) {
  * This function reinitializes the ADC for reading temp
  *
  */
-void set_temp() {
+void ADC_reconfig_temp() {
 	ADC_ChannelConfTypeDef sConfig = {0};
 
 	sConfig.Channel = ADC_CHANNEL_TEMPSENSOR;
-	sConfig.Rank = ADC_REGULAR_RANK_1;
 	sConfig.SamplingTime = ADC_SAMPLETIME_640CYCLES_5; // max for accuracy improvement
-	sConfig.SingleDiff = ADC_SINGLE_ENDED;
-	sConfig.OffsetNumber = ADC_OFFSET_NONE;
-	sConfig.Offset = 0;
 	if(HAL_ADC_ConfigChannel(&hadc1, &sConfig) !=HAL_OK){
 		Error_Handler();
 	}
 }
 
-
-static void MX_ADC1_Reinit(void){
-	ADC_ChannelConfTypeDef sConfig = {0};
-	// Check status to reinitialize to
-	status = HAL_GPIO_ReadPin(myLed_GPIO_Port, myLed_Pin); // 1 if on, 0 if off
-
-
-	// configure to correct ADC channel
-	if (status == 1) {
-		sConfig.Channel = ADC_CHANNEL_TEMPSENSOR;
-	} else {
-		sConfig.Channel = ADC_CHANNEL_VREFINT;
-	}
-
-}
 
 
 
@@ -275,10 +248,12 @@ int main(void)
 	status = readButton(status); // To use button, hold until LED switches them immediately release
 
 	if (status == 0) { // calculate vref
+		ADC_reconfig_vref();
 		v_ref = readVRef();
 		printf("Voltage: %f mV\n", v_ref);
 
 	} else { // calculate temperature
+		ADC_reconfig_temp();
 		temp = readTemp(v_ref);
 		printf("Temperature: %f degrees C\n", temp);
 	}
@@ -462,11 +437,11 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(myLed_GPIO_Port, myLed_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : userButton_Pin resetButton_Pin */
-  GPIO_InitStruct.Pin = userButton_Pin|resetButton_Pin;
+  /*Configure GPIO pin : userButton_Pin */
+  GPIO_InitStruct.Pin = userButton_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+  HAL_GPIO_Init(userButton_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : myLed_Pin */
   GPIO_InitStruct.Pin = myLed_Pin;
