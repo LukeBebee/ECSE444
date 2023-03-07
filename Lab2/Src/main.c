@@ -21,7 +21,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include <stdio.h>
+#include "stdio.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -64,7 +64,7 @@ static void MX_USART2_UART_Init(void);
 /* USER CODE BEGIN PFP */
 // functions for lab 2
 char readButton(char status);
-float readVRef();
+int readVRef();
 float readTemp(float v_ref);
 void ADC_reconfig_vref(void);
 void ADC_reconfig_temp(void);
@@ -112,7 +112,7 @@ char readButton(char status) {
  * This function calculates the reference voltage
  *
  */
-float readVRef() {
+int readVRef() {
 	// ADC conversion by polling as per data sheet instructions (pg 104 of HAL driver user manual)
 	HAL_ADC_Start(&hadc1); // pg 107 of HAL driver manual
 	while (HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY) != HAL_OK) {} // pg 142, 69 107 of HAL driver manual; HAL_MAX_DELAY means infinite poll until successful
@@ -121,7 +121,7 @@ float readVRef() {
 
 	// calculate v_ref
 	//float v_ref = 3000.0f * (*VREFINT) / raw_data;
-	float v_ref = __HAL_ADC_CALC_VREFANALOG_VOLTAGE(raw_data, ADC_RESOLUTION_12B); // pg 129 of HAL driver manual
+	int v_ref = __HAL_ADC_CALC_VREFANALOG_VOLTAGE(raw_data, ADC_RESOLUTION_12B); // pg 129 of HAL driver manual
 
 	return v_ref;
 }
@@ -134,7 +134,7 @@ void ADC_reconfig_vref() {
 	ADC_ChannelConfTypeDef sConfig = {0};
 
 	sConfig.Channel = ADC_CHANNEL_VREFINT;
-	sConfig.SamplingTime = ADC_SAMPLETIME_12CYCLES_5;
+	sConfig.SamplingTime = ADC_SAMPLETIME_247CYCLES_5;
 	if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
 	{
 	  Error_Handler();
@@ -152,10 +152,14 @@ float readTemp(float v_ref) {
 	raw_data = HAL_ADC_GetValue(&hadc1); // pg 110 107 of HAL driver manual
 	HAL_ADC_Stop(&hadc1); // pg 107 107 of HAL driver manual
 
+	// page 130 of HAL driver manual for this function
+	//float temp = __HAL_ADC_CALC_TEMPERATURE(v_ref, raw_data, ADC_RESOLUTION_12B);
+
 	// TS_CAL1 taken @ 30 degrees C and TS_CAL2 taken @ 130 degrees C, both w/ Vref = 3.0 (pg 44 of datasheet)
 	// Hence (130.0 - 30.0) and (3.3/3.0)
 	// Equation from page 689 of long datasheet
-	float temp = ((130.0 - 30.0)/(*TS_CAL2 - *TS_CAL1)) * ((3.3/3.0)*raw_data - (int) *TS_CAL1) + 30.0;
+	float temp = ((130.0 - 30.0)/(*TS_CAL2 - *TS_CAL1)) * ((v_ref/3000.0)*raw_data - (int) *TS_CAL1) + 30.0;
+
 
 
 	return temp;
@@ -169,12 +173,19 @@ void ADC_reconfig_temp() {
 	ADC_ChannelConfTypeDef sConfig = {0};
 
 	sConfig.Channel = ADC_CHANNEL_TEMPSENSOR;
-	sConfig.SamplingTime = ADC_SAMPLETIME_640CYCLES_5; // max for accuracy improvement
+	sConfig.SamplingTime = ADC_SAMPLETIME_640CYCLES_5; // max for accuracy
 	if(HAL_ADC_ConfigChannel(&hadc1, &sConfig) !=HAL_OK){
 		Error_Handler();
 	}
 }
 
+int _write(int file, char *ptr, int len) {
+	int DataIdx;
+	for (DataIdx = 0; DataIdx < len; DataIdx++) {
+		ITM_SendChar(*ptr++);
+	}
+	return len;
+}
 
 
 
@@ -188,7 +199,7 @@ int main(void)
 {
   /* USER CODE BEGIN 1 */
 
-  float v_ref;
+  int v_ref;
   float temp;
 
 
@@ -225,7 +236,7 @@ int main(void)
   HAL_ADCEx_Calibration_Start(&hadc1, ADC_SINGLE_ENDED); // pg 104 optional instruction to improve accuracy **note that hadc1 is generated handle for ADC
 
 
-  printf("Starting program.");
+  printf("Starting program.\n");
 
 
   // get v_ref once to be able to get temperature
@@ -250,7 +261,7 @@ int main(void)
 	if (status == 0) { // calculate vref
 		ADC_reconfig_vref();
 		v_ref = readVRef();
-		printf("Voltage: %f mV\n", v_ref);
+		printf("Voltage: %i mV\n", v_ref);
 
 	} else { // calculate temperature
 		ADC_reconfig_temp();
@@ -356,7 +367,7 @@ static void MX_ADC1_Init(void)
   */
   sConfig.Channel = ADC_CHANNEL_VREFINT;
   sConfig.Rank = ADC_REGULAR_RANK_1;
-  sConfig.SamplingTime = ADC_SAMPLETIME_12CYCLES_5;
+  sConfig.SamplingTime = ADC_SAMPLETIME_247CYCLES_5;
   sConfig.SingleDiff = ADC_SINGLE_ENDED;
   sConfig.OffsetNumber = ADC_OFFSET_NONE;
   sConfig.Offset = 0;
