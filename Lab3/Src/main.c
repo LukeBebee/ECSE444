@@ -53,11 +53,12 @@ static void MX_GPIO_Init(void);
 static void MX_DAC1_Init(void);
 static void MX_TIM2_Init(void);
 /* USER CODE BEGIN PFP */
-
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
+
 
 /* USER CODE END 0 */
 
@@ -94,12 +95,12 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
   // initialize DAC
-  HAL_DACEx_SelfCalibrate(&hdac1, &sConfigGlobal, DAC_CHANNEL_1);
-  HAL_DACEx_SelfCalibrate(&hdac1, &sConfigGlobal, DAC_CHANNEL_2);
+  HAL_DACEx_SelfCalibrate(&hdac1, &sConfigGlobal, DAC1_CHANNEL_1);
+  HAL_DACEx_SelfCalibrate(&hdac1, &sConfigGlobal, DAC1_CHANNEL_2);
 
 
-  HAL_DAC_Start(&hdac1, DAC_CHANNEL_1);
-  HAL_DAC_Start(&hdac1, DAC_CHANNEL_2);
+  HAL_DAC_Start(&hdac1, DAC1_CHANNEL_1);
+  HAL_DAC_Start(&hdac1, DAC1_CHANNEL_2);
 
 
   /*
@@ -113,7 +114,7 @@ int main(void)
   int saw_wave_value = 0;
   int saw_wave_increment = 1;
 
-
+  char status = 1; // status 1 is saw, 0 is triangle
 
   /* USER CODE END 2 */
 
@@ -134,12 +135,20 @@ int main(void)
 		  saw_wave_value += saw_wave_increment;
 	  }
 
-	  // get signal to pass to DAC
-	  uint32_t triangle_signal = 0;
-	  uint32_t saw_signal = 0;
-	  // output to DAC
-	  HAL_DAC_SetValue(&hdac1, DAC_CHANNEL_1, DAC_ALIGN_12B_R, triangle_signal);
-	  HAL_DAC_SetValue(&hdac1, DAC_CHANNEL_2, DAC_ALIGN_12B_R, saw_signal);
+	  // get signal to pass to DAC (scaled up for larger voltage)
+	  uint32_t triangle_signal = triangle_wave_value*100;
+	  uint32_t saw_signal = saw_wave_value*100;
+
+	  // output to DAC (this currently switches the signals to the output ports, but one of the ports is not working)
+	  status = HAL_GPIO_ReadPin(userButton_GPIO_Port, userButton_Pin);
+	  if (status == 1) {
+		  HAL_DAC_SetValue(&hdac1, DAC1_CHANNEL_2, DAC_ALIGN_12B_R, saw_signal);
+		  HAL_DAC_SetValue(&hdac1, DAC1_CHANNEL_1, DAC_ALIGN_12B_R, triangle_signal); // not working
+	  } else {
+		  HAL_DAC_SetValue(&hdac1, DAC1_CHANNEL_2, DAC_ALIGN_12B_R, triangle_signal);
+		  HAL_DAC_SetValue(&hdac1, DAC1_CHANNEL_1, DAC_ALIGN_12B_R, saw_signal); // not working
+	  }
+
 
 
 	  HAL_Delay(15); // delay 15ms for ~15ms period
