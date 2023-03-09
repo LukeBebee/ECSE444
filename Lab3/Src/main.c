@@ -21,7 +21,10 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include <stdio.h>
+// included so we can call CMSIS functions
+#define ARM_MATH_CM4
+#include "arm_math.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -31,6 +34,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+//#define PI 3.14159
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -94,11 +98,11 @@ int main(void)
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
 
-  // initialize DAC
+  // Initialize DAC
   HAL_DACEx_SelfCalibrate(&hdac1, &sConfigGlobal, DAC1_CHANNEL_1);
   HAL_DACEx_SelfCalibrate(&hdac1, &sConfigGlobal, DAC1_CHANNEL_2);
 
-
+  // Start DAC
   HAL_DAC_Start(&hdac1, DAC1_CHANNEL_1);
   HAL_DAC_Start(&hdac1, DAC1_CHANNEL_2);
 
@@ -114,7 +118,13 @@ int main(void)
   int saw_wave_value = 0;
   int saw_wave_increment = 1;
 
+  // Variables for sine wave
+  float sine_wave_signal;
+  int sine_radians = 0; // value [0,13] which when multiplied by PI/7 will return radians (14 samples per period)
+
+  // Variables for input/output
   char status = 1; // status 1 is saw, 0 is triangle
+  int signal_multiplier = 100; // signal multiplier for larger voltage output to DAC
 
   /* USER CODE END 2 */
 
@@ -123,35 +133,44 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-	  // increment triangle wave
+	  // Increment triangle wave
 	  if (triangle_wave_value == 16 || triangle_wave_value == 0) { // flip increment when at max and min
 		  triangle_wave_increment *= -1;
 	  }
 	  triangle_wave_value  += triangle_wave_increment;
-	  // increment saw wave
-	  if (saw_wave_value == 16) {
-		  saw_wave_value = 0;
-	  } else {
-		  saw_wave_value += saw_wave_increment;
-	  }
 
-	  // get signal to pass to DAC (scaled up for larger voltage)
-	  uint32_t triangle_signal = triangle_wave_value*100;
-	  uint32_t saw_signal = saw_wave_value*100;
+	  // Increment saw wave
+	  saw_wave_value += saw_wave_increment;
+	  saw_wave_value = saw_wave_value % 16;
 
-	  // output to DAC (this currently switches the signals to the output ports, but one of the ports is not working)
-	  status = HAL_GPIO_ReadPin(userButton_GPIO_Port, userButton_Pin);
-	  if (status == 1) {
-		  HAL_DAC_SetValue(&hdac1, DAC1_CHANNEL_2, DAC_ALIGN_12B_R, saw_signal);
-		  HAL_DAC_SetValue(&hdac1, DAC1_CHANNEL_1, DAC_ALIGN_12B_R, triangle_signal); // not working
-	  } else {
-		  HAL_DAC_SetValue(&hdac1, DAC1_CHANNEL_2, DAC_ALIGN_12B_R, triangle_signal);
-		  HAL_DAC_SetValue(&hdac1, DAC1_CHANNEL_1, DAC_ALIGN_12B_R, saw_signal); // not working
-	  }
+	  // Increment sine wave
+	  sine_radians += 1;
+	  sine_radians = sine_radians % 14;
+
+	  // Get signal to pass to DAC (scaled up for larger voltage)
+	  uint32_t triangle_signal = triangle_wave_value*signal_multiplier;
+	  uint32_t saw_signal = saw_wave_value*signal_multiplier;
+
+	  // Output to DAC (this currently switches the signals to the output ports, but one of the ports is not working)
+	  // Comment out to show sine signal
+//	  status = HAL_GPIO_ReadPin(userButton_GPIO_Port, userButton_Pin);
+//	  if (status == 1) {
+//		  HAL_DAC_SetValue(&hdac1, DAC1_CHANNEL_2, DAC_ALIGN_12B_R, saw_signal);
+//		  //HAL_DAC_SetValue(&hdac1, DAC1_CHANNEL_1, DAC_ALIGN_12B_R, triangle_signal); // second output pin not working
+//	  } else {
+//		  HAL_DAC_SetValue(&hdac1, DAC1_CHANNEL_2, DAC_ALIGN_12B_R, triangle_signal);
+//	  }
+
+	  /*
+	   * Sine output
+	   * 14 cycles (~14ms period)
+	   * Commented out to show saw and triangle signals
+	   */
+	  sine_wave_signal = arm_sin_f32(sine_radians*PI/7);
+	  HAL_DAC_SetValue(&hdac1, DAC1_CHANNEL_2, DAC_ALIGN_12B_R, ((int) sine_wave_signal * signal_multiplier));
 
 
-
-	  HAL_Delay(15); // delay 15ms for ~15ms period
+	  HAL_Delay(1); // delay 1ms for ~16ms period (16 cycles per period)
 
     /* USER CODE BEGIN 3 */
   }
