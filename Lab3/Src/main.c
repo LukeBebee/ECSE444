@@ -107,6 +107,9 @@ int main(void)
   HAL_DAC_Start(&hdac1, DAC1_CHANNEL_2);
 
 
+  // ----------------------------------------------------------------------------------------------------------------------------------------
+  // Part 1 Code below
+  // ----------------------------------------------------------------------------------------------------------------------------------------
   /*
    * 16 discrete values for saw wave (as in lab doc example)
    * 8 discrete values for triangle wave (as in lab doc example)
@@ -114,17 +117,33 @@ int main(void)
   // Variables for triangle wave
   int triangle_wave_value = 0;
   int triangle_wave_increment = -2; // start negative because sign will flip in first
+  uint32_t triangle_signal;
+
   // Variables for saw wave
   int saw_wave_value = 0;
   int saw_wave_increment = 1;
+  uint32_t saw_signal;
+
+  int saw_tri_samples_per_period = 8;
 
   // Variables for sine wave
-  float sine_wave_signal;
-  int sine_radians = 0; // value [0,13] which when multiplied by PI/7 will return radians (14 samples per period)
+  float sine_wave_value;
+  uint32_t sine_wave_signal;
+  int sine_radians = 0; // value [0,sine_cylces] which when multiplied by 2*PI/sine_samples_per_period will return radians for sine output
+  int sine_samples_per_period = 8;
 
   // Variables for input/output
   char status = 1; // status 1 is saw, 0 is triangle
-  int signal_multiplier = 100; // signal multiplier for larger voltage output to DAC
+  int saw_multiplier = 585; // signal multiplier (should make signal = 4095 for max voltage @ 12-bit resolution, max value for saw and tri is 7 and 7*585 = 4095)
+  int tri_multiplier = 512; // makes signal 4096, will subtract 1 from end value
+  int sine_multiplier = 2048; // max signal output 2, so this makes max DAC value 4096 (will subtract one from signal for 4095)
+  // ----------------------------------------------------------------------------------------------------------------------------------------
+  // Part 1 Code above
+  // ----------------------------------------------------------------------------------------------------------------------------------------
+  // ----------------------------------------------------------------------------------------------------------------------------------------
+  // Part 2 Code below
+  // ----------------------------------------------------------------------------------------------------------------------------------------
+
 
   /* USER CODE END 2 */
 
@@ -133,23 +152,26 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
+	  // ----------------------------------------------------------------------------------------------------------------------------------------
+	  // Part 1 Code below
+	  // ----------------------------------------------------------------------------------------------------------------------------------------
 	  // Increment triangle wave
-	  if (triangle_wave_value == 16 || triangle_wave_value == 0) { // flip increment when at max and min
+	  if (triangle_wave_value == saw_tri_samples_per_period || triangle_wave_value == 0) { // flip increment when at max and min
 		  triangle_wave_increment *= -1;
 	  }
 	  triangle_wave_value  += triangle_wave_increment;
 
 	  // Increment saw wave
 	  saw_wave_value += saw_wave_increment;
-	  saw_wave_value = saw_wave_value % 16;
+	  saw_wave_value = saw_wave_value % saw_tri_samples_per_period;
 
 	  // Increment sine wave
 	  sine_radians += 1;
-	  sine_radians = sine_radians % 14;
+	  sine_radians = sine_radians % sine_samples_per_period;
 
 	  // Get signal to pass to DAC (scaled up for larger voltage)
-	  uint32_t triangle_signal = triangle_wave_value*signal_multiplier;
-	  uint32_t saw_signal = saw_wave_value*signal_multiplier;
+	  triangle_signal = triangle_wave_value*tri_multiplier;
+	  saw_signal = saw_wave_value*saw_multiplier;
 
 	  // Output to DAC (this currently switches the signals to the output ports, but one of the ports is not working)
 	  // Comment out to show sine signal
@@ -158,19 +180,37 @@ int main(void)
 //		  HAL_DAC_SetValue(&hdac1, DAC1_CHANNEL_2, DAC_ALIGN_12B_R, saw_signal);
 //		  //HAL_DAC_SetValue(&hdac1, DAC1_CHANNEL_1, DAC_ALIGN_12B_R, triangle_signal); // second output pin not working
 //	  } else {
+//		  if (triangle_signal == 4096) {triangle_signal -= 1;}
 //		  HAL_DAC_SetValue(&hdac1, DAC1_CHANNEL_2, DAC_ALIGN_12B_R, triangle_signal);
+//		  //HAL_DAC_SetValue(&hdac1, DAC1_CHANNEL_1, DAC_ALIGN_12B_R, saw_signal); // second output pin not working
 //	  }
+	  //HAL_Delay(1); delay 2ms for triangle and saw
 
 	  /*
 	   * Sine output
 	   * 14 cycles (~14ms period)
 	   * Commented out to show saw and triangle signals
 	   */
-	  sine_wave_signal = arm_sin_f32(sine_radians*PI/7);
-	  HAL_DAC_SetValue(&hdac1, DAC1_CHANNEL_2, DAC_ALIGN_12B_R, ((int) sine_wave_signal * signal_multiplier));
+	  sine_wave_value = arm_sin_f32(sine_radians*PI*2/(sine_samples_per_period)) + 1; // potentially add 1 for positive DAC output
+	  sine_wave_signal = sine_wave_value * sine_multiplier; // make max value 4095 (max for 12 bit DAC resolution)
+	  if (sine_wave_signal == 4096) {sine_wave_signal -= 1;}
+	  HAL_DAC_SetValue(&hdac1, DAC1_CHANNEL_2, DAC_ALIGN_12B_R, sine_wave_signal);
+	  HAL_Delay(1); // delay  2ms for sine wave (sample frequency is more than twice the signal frequency, so we meet nyquist criterion)
+	  // ----------------------------------------------------------------------------------------------------------------------------------------
+	  // Part 1 Code above
+	  // ----------------------------------------------------------------------------------------------------------------------------------------
+	  // ----------------------------------------------------------------------------------------------------------------------------------------
+	  // Part 2 Code below
+	  // ----------------------------------------------------------------------------------------------------------------------------------------
 
 
-	  HAL_Delay(1); // delay 1ms for ~16ms period (16 cycles per period)
+
+
+
+
+
+
+
 
     /* USER CODE BEGIN 3 */
   }
