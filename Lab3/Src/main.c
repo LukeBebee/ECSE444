@@ -54,13 +54,14 @@ UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
 DAC_ChannelConfTypeDef sConfigGlobal;
-int note_selector = 0; // [0, 2] to indicate if the note that should be played is C6 E6 or G6 respectively
+
+int note_selector; // [0, 2] to indicate if the note that should be played is C6 E6 or G6 respectively
 uint16_t note_data[672]; // array to hold DAC output of whichever note is currently being played
-int note_data_index = 0; // index of above array to indicate which piece of data we are on
+int note_data_index; // index of above array to indicate which piece of data we are on
 
-float sine_wave_values[15];  // array to hold sine wave values for pt 2 step 2
-float sine_wave_value; // value to to debug step 2
 
+int sine_wave_index; //[0, 43] 44.1 kHz sample rate, 1kHz desired sine wave, so one period every 44 samples
+float sine_wave_values[44];
 
 
 /* USER CODE END PV */
@@ -102,11 +103,13 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) { // page 391 HAL driver manual
 
 // Handler for timer interrupt
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
-	sine_wave_value = sine_wave_values[note_data_index];
-	HAL_DAC_SetValue(&hdac1, DAC1_CHANNEL_2, DAC_ALIGN_12B_R, (uint32_t) sine_wave_values[note_data_index]);
-	note_data_index = (note_data_index + 1) % 15;
-	printf(note_data_index);
-	printf("Timer Interrupt");
+	if (htim == &htim2) {
+		sine_wave_index = (sine_wave_index + 1)%44;
+
+		HAL_DAC_SetValue(&hdac1, DAC1_CHANNEL_2, DAC_ALIGN_12B_R, (uint32_t) sine_wave_values[sine_wave_index]);
+
+		//note_data_index = (note_data_index + 1) % 15;
+	}
 }
 
 // for printf
@@ -127,6 +130,11 @@ int _write(int file, char *ptr, int len) {
 int main(void)
 {
   /* USER CODE BEGIN 1 */
+	note_selector = 0; // [0, 2] to indicate if the note that should be played is C6 E6 or G6 respectively
+	note_data_index = 0; // index of above array to indicate which piece of data we are on
+
+
+	sine_wave_index = 0; //[0, 43] 44.1 kHz sample rate, 1kHz desired sine wave, so one period every 44 samples
 
   /* USER CODE END 1 */
 
@@ -156,12 +164,12 @@ int main(void)
 
   // Initialize DAC
   HAL_DACEx_SelfCalibrate(&hdac1, &sConfigGlobal, DAC1_CHANNEL_1);
-  //HAL_DACEx_SelfCalibrate(&hdac1, &sConfigGlobal, DAC1_CHANNEL_2);//from part 1
+  HAL_DACEx_SelfCalibrate(&hdac1, &sConfigGlobal, DAC1_CHANNEL_2);//from part 1
 
 
   // Start DAC and timer
   HAL_DAC_Start(&hdac1, DAC1_CHANNEL_1);
-  //HAL_DAC_Start(&hdac1, DAC1_CHANNEL_2);//from part 1
+  HAL_DAC_Start(&hdac1, DAC1_CHANNEL_2);//from part 1
   HAL_TIM_Base_Start_IT(&htim2); //Start the timer in interrupt mode
 
 
@@ -202,12 +210,13 @@ int main(void)
   // Part 2 Code below
   // ----------------------------------------------------------------------------------------------------------------------------------------
 
-  // create an array of sine wave values using CMSIS library
-  for (int i = 0; i < 15; i++) {
-	  sine_wave_values[i] = (arm_sin_f32(2*PI*i/15)+1) * 2047.5; // add 1 such that no negative values, max is 2 so multiply by 2047.5 for signal
-	  sine_wave_value = sine_wave_values[i];
-  }
 
+  // make sine array
+  for (sine_wave_index = 0; sine_wave_index < 44; sine_wave_index++) {
+	  sine_wave_values[sine_wave_index] = (arm_sin_f32(2*PI*sine_wave_index/44)+1)*(2047.5);
+
+  }
+  printf("Sine array made.\n");
   /* USER CODE END 2 */
 
   /* Infinite loop */
