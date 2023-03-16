@@ -12643,7 +12643,7 @@ int main(void)
  8004a3c:	2300      	movs	r3, #0
  8004a3e:	60bb      	str	r3, [r7, #8]
  8004a40:	e02a      	b.n	8004a98 <main+0x110>
-  	  E6_data[i] = (arm_sin_f32(2*PI*i/E6_size)+1)*(1365); //1365 multiplier as 4095 max output, max sine output of 2, scale down to 2/3 to reduce distortion (4095/2)*(2/3)
+  	  E6_data[i] = (arm_sin_f32(2*PI*i/E6_size)+1)*(1365);
  8004a42:	68bb      	ldr	r3, [r7, #8]
  8004a44:	ee07 3a90 	vmov	s15, r3
  8004a48:	eef8 7ae7 	vcvt.f32.s32	s15, s15
@@ -12681,7 +12681,7 @@ int main(void)
  8004aa2:	2300      	movs	r3, #0
  8004aa4:	607b      	str	r3, [r7, #4]
  8004aa6:	e02a      	b.n	8004afe <main+0x176>
-  	  G6_data[i] = (arm_sin_f32(2*PI*i/G6_size)+1)*(1365); //1365 multiplier as 4095 max output, max sine output of 2, scale down to 2/3 to reduce distortion (4095/2)*(2/3)
+  	  G6_data[i] = (arm_sin_f32(2*PI*i/G6_size)+1)*(1365);
  8004aa8:	687b      	ldr	r3, [r7, #4]
  8004aaa:	ee07 3a90 	vmov	s15, r3
  8004aae:	eef8 7ae7 	vcvt.f32.s32	s15, s15

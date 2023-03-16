@@ -55,23 +55,26 @@ UART_HandleTypeDef huart2;
 /* USER CODE BEGIN PV */
 DAC_ChannelConfTypeDef sConfigGlobal;
 
-int note_selector; // [0, 2] to indicate if the note that should be played is C6 E6 or G6 respectively
-/* 44.1 kHz sample rate
- * C6 is 1kHz, so 44 samples per period
- * E6 is 1.3kHz, so 33 samples per period
- * G6 is 1.57Hz, so 28 samples per period
+/*
+ * Part 2 variables
+ * 44.1 kHz sample rate (done with 1814 counter period bc of
  */
+int note_selector; // [0, 2] to indicate if the note that should be played is C6 E6 or G6 respectively
 uint16_t note_data[924]; // array to hold DAC output of whichever note is currently being played (924 is LCM of each note's number of samples for cicularity)
 int note_data_index; // index of above array to indicate which piece of data we are on (from step 2 of part 2)
-int C6_size = 44;
-int E6_size = 33;
-int G6_size = 28;
+int C6_size = 44; // C6 is 1kHz, so 44 samples per period
+int E6_size = 33; // E6 is 1.3kHz, so 33 samples per period
+int G6_size = 28; // G6 is 1.57Hz, so 28 samples per period
 uint16_t C6_data[44];
 uint16_t E6_data[33];
 uint16_t G6_data[28];
 
 char change_note = 0;
 
+
+/*
+ * Part 1 variables
+ */
 int sine_wave_index; //[0, 43] 44.1 kHz sample rate, 1kHz desired sine wave, so one period every 44 samples
 float sine_wave_values[44];
 
@@ -114,7 +117,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) { // page 391 HAL driver manual
 	}
 }
 
-// Handler for timer interrupt
+// Handler for timer interrupt (from step 2 in part 2)
 //void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 //	if (htim == &htim2) {
 //		sine_wave_index = (sine_wave_index + 1)%44;
@@ -166,10 +169,10 @@ int main(void)
 {
   /* USER CODE BEGIN 1 */
 	note_selector = 0; // [0, 2] to indicate if the note that should be played is C6 E6 or G6 respectively
-	note_data_index = 0; // index of above array to indicate which piece of data we are on
 
+	note_data_index = 0; // index of above array to indicate which piece of data we are on (for step 2 of part 2)
 
-	sine_wave_index = 0; //[0, 43] 44.1 kHz sample rate, 1kHz desired sine wave, so one period every 44 samples
+	sine_wave_index = 0; //[0, 43] 44.1 kHz sample rate, 1kHz desired sine wave, so one period every 44 samples (for part 1)
 
   /* USER CODE END 1 */
 
@@ -204,8 +207,8 @@ int main(void)
 
   // Start DAC and timer
   //HAL_DAC_Start(&hdac1, DAC1_CHANNEL_1);
-  //HAL_DAC_Start(&hdac1, DAC1_CHANNEL_2);//from part 1
-  HAL_TIM_Base_Start_IT(&htim2); //Start the timer in interrupt mode
+  //HAL_DAC_Start(&hdac1, DAC1_CHANNEL_2); //from part 1
+  HAL_TIM_Base_Start_IT(&htim2); // Start the timer in interrupt mode (for step 2 of part 2)
 
 
   // ----------------------------------------------------------------------------------------------------------------------------------------
@@ -255,15 +258,15 @@ int main(void)
 
 
 
-  // make notes
+  // Make notes
   for (int i = 0; i < C6_size; i++) {
-	  C6_data[i] = (arm_sin_f32(2*PI*i/C6_size)+1)*(1365); //1365 multiplier as 4095 max output, max sine output of 2, scale down to 2/3 to reduce distortion (4095/2)*(2/3)
+	  C6_data[i] = (arm_sin_f32(2*PI*i/C6_size)+1)*(1365); // 1365 multiplier as 4095 max output, max sine output of 2, scale down to 2/3 to reduce distortion (4095/2)*(2/3)
   }
   for (int i = 0; i < E6_size; i++) {
-  	  E6_data[i] = (arm_sin_f32(2*PI*i/E6_size)+1)*(1365); //1365 multiplier as 4095 max output, max sine output of 2, scale down to 2/3 to reduce distortion (4095/2)*(2/3)
+  	  E6_data[i] = (arm_sin_f32(2*PI*i/E6_size)+1)*(1365);
   }
   for (int i = 0; i < G6_size; i++) {
-  	  G6_data[i] = (arm_sin_f32(2*PI*i/G6_size)+1)*(1365); //1365 multiplier as 4095 max output, max sine output of 2, scale down to 2/3 to reduce distortion (4095/2)*(2/3)
+  	  G6_data[i] = (arm_sin_f32(2*PI*i/G6_size)+1)*(1365);
   }
 
 
@@ -285,7 +288,53 @@ int main(void)
   while (1)
   {
 
+	  // ----------------------------------------------------------------------------------------------------------------------------------------
+	  	  // Part 1 Code below
+	  	  // ----------------------------------------------------------------------------------------------------------------------------------------
+	  	  // Increment triangle wave
+//	  	  if (triangle_wave_value == saw_tri_samples_per_period || triangle_wave_value == 0) { // flip increment when at max and min
+//	  		  triangle_wave_increment *= -1;
+//	  	  }
+//	  	  triangle_wave_value  += triangle_wave_increment;
+//
+//	  	  // Increment saw wave
+//	  	  saw_wave_value += saw_wave_increment;
+//	  	  saw_wave_value = saw_wave_value % saw_tri_samples_per_period;
+//
+//	  	  // Increment sine wave
+//	  	  sine_radians += 1;
+//	  	  sine_radians = sine_radians % sine_samples_per_period;
+//
+//	  	  // Get signal to pass to DAC (scaled up for larger voltage)
+//	  	  triangle_signal = triangle_wave_value*tri_multiplier;
+//	  	  saw_signal = saw_wave_value*saw_multiplier;
+//
+//	  	  // Output to DAC (this currently switches the signals to the output ports, but one of the ports is not working)
+//	  	  // Comment out to show sine signal
+//	  	  if (status = 1) {
+//
+//	  	  	  HAL_DAC_SetValue(&hdac1, DAC1_CHANNEL_2, DAC_ALIGN_12B_R, saw_signal);
+//	  		//HAL_DAC_SetValue(&hdac1, DAC1_CHANNEL_1, DAC_ALIGN_12B_R, triangle_signal); // second output pin not working
+//	  	  } else {
+//	  		  if (triangle_signal == 4096) {triangle_signal -= 1;}
+//	  		  HAL_DAC_SetValue(&hdac1, DAC1_CHANNEL_2, DAC_ALIGN_12B_R, triangle_signal);
+//	  		  //HAL_DAC_SetValue(&hdac1, DAC1_CHANNEL_1, DAC_ALIGN_12B_R, saw_signal); // second output pin not working
+//	  	  }
+//	  	  HAL_Delay(1); // delay 2ms for triangle and saw
 
+	  	  /*
+	  	   * Sine output
+	  	   * 14 cycles (~14ms period)
+	  	   * Commented out to show saw and triangle signals
+	  	   */
+//	  	  sine_wave_value = arm_sin_f32(sine_radians*PI*2/(sine_samples_per_period)) + 1; // potentially add 1 for positive DAC output
+//	  	  sine_wave_signal = sine_wave_value * sine_multiplier; // make max value 4095 (max for 12 bit DAC resolution)
+//	  	  if (sine_wave_signal == 4096) {sine_wave_signal -= 1;}
+//	  	  HAL_DAC_SetValue(&hdac1, DAC1_CHANNEL_2, DAC_ALIGN_12B_R, sine_wave_signal);
+//	  	  HAL_Delay(1); // delay  2ms for sine wave (sample frequency is more than twice the signal frequency, so we meet nyquist criterion)
+	  	  // ----------------------------------------------------------------------------------------------------------------------------------------
+	  	  // Part 1 Code above
+	  	  // ----------------------------------------------------------------------------------------------------------------------------------------
 
 
 
