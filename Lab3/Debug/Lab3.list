@@ -12536,13 +12536,13 @@ int main(void)
  800498e:	4b71      	ldr	r3, [pc, #452]	; (8004b54 <main+0x1cc>)
  8004990:	2200      	movs	r2, #0
  8004992:	601a      	str	r2, [r3, #0]
-	note_data_index = 0; // index of above array to indicate which piece of data we are on
+
+	note_data_index = 0; // index of above array to indicate which piece of data we are on (for step 2 of part 2)
  8004994:	4b70      	ldr	r3, [pc, #448]	; (8004b58 <main+0x1d0>)
  8004996:	2200      	movs	r2, #0
  8004998:	601a      	str	r2, [r3, #0]
 
-
-	sine_wave_index = 0; //[0, 43] 44.1 kHz sample rate, 1kHz desired sine wave, so one period every 44 samples
+	sine_wave_index = 0; //[0, 43] 44.1 kHz sample rate, 1kHz desired sine wave, so one period every 44 samples (for part 1)
  800499a:	4b70      	ldr	r3, [pc, #448]	; (8004b5c <main+0x1d4>)
  800499c:	2200      	movs	r2, #0
  800499e:	601a      	str	r2, [r3, #0]
@@ -12583,7 +12583,7 @@ int main(void)
  80049be:	4968      	ldr	r1, [pc, #416]	; (8004b60 <main+0x1d8>)
  80049c0:	4868      	ldr	r0, [pc, #416]	; (8004b64 <main+0x1dc>)
  80049c2:	f7fc f9dd 	bl	8000d80 <HAL_DACEx_SelfCalibrate>
-  HAL_DACEx_SelfCalibrate(&hdac1, &sConfigGlobal, DAC1_CHANNEL_2);//from part 1
+  HAL_DACEx_SelfCalibrate(&hdac1, &sConfigGlobal, DAC1_CHANNEL_2); //from part 1
  80049c6:	2210      	movs	r2, #16
  80049c8:	4965      	ldr	r1, [pc, #404]	; (8004b60 <main+0x1d8>)
  80049ca:	4866      	ldr	r0, [pc, #408]	; (8004b64 <main+0x1dc>)
@@ -12592,20 +12592,20 @@ int main(void)
 
   // Start DAC and timer
   //HAL_DAC_Start(&hdac1, DAC1_CHANNEL_1);
-  //HAL_DAC_Start(&hdac1, DAC1_CHANNEL_2);//from part 1
-  HAL_TIM_Base_Start_IT(&htim2); //Start the timer in interrupt mode
+  //HAL_DAC_Start(&hdac1, DAC1_CHANNEL_2); //from part 1
+  HAL_TIM_Base_Start_IT(&htim2); // Start the timer in interrupt mode (for step 2 of part 2)
  80049d0:	4865      	ldr	r0, [pc, #404]	; (8004b68 <main+0x1e0>)
  80049d2:	f7fe fc79 	bl	80032c8 <HAL_TIM_Base_Start_IT>
 //  printf("Sine array made.\n");
 
 
 
-  // make notes
+  // Make notes
   for (int i = 0; i < C6_size; i++) {
  80049d6:	2300      	movs	r3, #0
  80049d8:	60fb      	str	r3, [r7, #12]
  80049da:	e02a      	b.n	8004a32 <main+0xaa>
-	  C6_data[i] = (arm_sin_f32(2*PI*i/C6_size)+1)*(1365); //1365 multiplier as 4095 max output, max sine output of 2, scale down to 2/3 to reduce distortion (4095/2)*(2/3)
+	  C6_data[i] = (arm_sin_f32(2*PI*i/C6_size)+1)*(1365); // 1365 multiplier as 4095 max output, max sine output of 2, scale down to 2/3 to reduce distortion (4095/2)*(2/3)
  80049dc:	68fb      	ldr	r3, [r7, #12]
  80049de:	ee07 3a90 	vmov	s15, r3
  80049e2:	eef8 7ae7 	vcvt.f32.s32	s15, s15
@@ -13055,9 +13055,9 @@ static void MX_TIM2_Init(void)
  8004ce8:	4b1a      	ldr	r3, [pc, #104]	; (8004d54 <MX_TIM2_Init+0x98>)
  8004cea:	2200      	movs	r2, #0
  8004cec:	609a      	str	r2, [r3, #8]
-  htim2.Init.Period = 1814;
+  htim2.Init.Period = 2721;
  8004cee:	4b19      	ldr	r3, [pc, #100]	; (8004d54 <MX_TIM2_Init+0x98>)
- 8004cf0:	f240 7216 	movw	r2, #1814	; 0x716
+ 8004cf0:	f640 22a1 	movw	r2, #2721	; 0xaa1
  8004cf4:	60da      	str	r2, [r3, #12]
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
  8004cf6:	4b17      	ldr	r3, [pc, #92]	; (8004d54 <MX_TIM2_Init+0x98>)
