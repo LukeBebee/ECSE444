@@ -46,7 +46,7 @@
 
 /* Private variables ---------------------------------------------------------*/
 DAC_HandleTypeDef hdac1;
-DMA_HandleTypeDef hdma_dac1_ch2;
+DMA_HandleTypeDef hdma_dac1_ch1;
 
 TIM_HandleTypeDef htim2;
 
@@ -109,7 +109,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) { // page 391 HAL driver manual
 		note_selector = (note_selector + 1)%3; // cycle through three notes
 		change_note = 1; // raise flag so we know to change the note
 		HAL_GPIO_TogglePin(myLed_GPIO_Port, myLed_Pin); // toggle LED as user feedback for a successful button press
-
+		printf("Need to change note\n");
 
 	}
 }
@@ -121,12 +121,13 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) { // page 391 HAL driver manual
 //
 //		HAL_DAC_SetValue(&hdac1, DAC1_CHANNEL_2, DAC_ALIGN_12B_R, (uint32_t) sine_wave_values[sine_wave_index]);
 //
-//		//note_data_index = (note_data_index + 1) % 15;
+//		note_data_index = (note_data_index + 1) % 15;
 //	}
 //}
 
 // DMA
 void HAL_DAC_ConvCpltCallbackCh1(DAC_HandleTypeDef *hdac) {
+	printf("Interrupt\n");
 	if (change_note) {
 		if (note_selector == 0) { // C6
 			for (int i = 0; i < 924; i++) {
@@ -142,6 +143,7 @@ void HAL_DAC_ConvCpltCallbackCh1(DAC_HandleTypeDef *hdac) {
 			}
 		}
 		change_note = 0; // reset this flag so we know we don't need to change the note
+		printf("Note Changed\n");
 	}
 }
 
@@ -201,8 +203,8 @@ int main(void)
 
 
   // Start DAC and timer
-  HAL_DAC_Start(&hdac1, DAC1_CHANNEL_1);
-  HAL_DAC_Start(&hdac1, DAC1_CHANNEL_2);//from part 1
+  //HAL_DAC_Start(&hdac1, DAC1_CHANNEL_1);
+  //HAL_DAC_Start(&hdac1, DAC1_CHANNEL_2);//from part 1
   HAL_TIM_Base_Start_IT(&htim2); //Start the timer in interrupt mode
 
 
@@ -266,16 +268,16 @@ int main(void)
 
 
 
-
-  // Start DMa
-  HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_2, (uint32_t*)note_data, (uint32_t) 924, DAC_ALIGN_12B_R);
   // initialize note_data for C6 to start
-  for (int i = 0; i < 924; i++) {
-	  note_data[i] = C6_data[i%C6_size];
-  }
+    for (int i = 0; i < 924; i++) {
+  	  note_data[i] = C6_data[i%C6_size];
+    }
+  // Start DAC with DMA
+  HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t*)note_data, (uint32_t) 924, DAC_ALIGN_12B_R);
 
 
-  printf("DMA started\n");
+
+  printf("Program started\n");
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -505,9 +507,9 @@ static void MX_DMA_Init(void)
   __HAL_RCC_DMA1_CLK_ENABLE();
 
   /* DMA interrupt init */
-  /* DMA1_Channel2_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA1_Channel2_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(DMA1_Channel2_IRQn);
+  /* DMA1_Channel1_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Channel1_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Channel1_IRQn);
 
 }
 
