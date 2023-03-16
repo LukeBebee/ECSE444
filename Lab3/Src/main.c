@@ -44,16 +44,23 @@
 
 /* Private variables ---------------------------------------------------------*/
 DAC_HandleTypeDef hdac1;
+DMA_HandleTypeDef hdma_dac1_ch1;
 
 TIM_HandleTypeDef htim2;
 
 /* USER CODE BEGIN PV */
 DAC_ChannelConfTypeDef sConfigGlobal;
+int note_selector = 0;
+uint16_t note_data[672];
+int note_data_index = 0;
+
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
+static void MX_DMA_Init(void);
 static void MX_DAC1_Init(void);
 static void MX_TIM2_Init(void);
 /* USER CODE BEGIN PFP */
@@ -62,7 +69,21 @@ static void MX_TIM2_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
+// Define our interrupt handlers
+// Handler for button interrupt
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) { // page 391 HAL driver manual
+	if (GPIO_Pin == userButton_Pin) {
+		//note_selector = (note_selector + 1)%3; // cycle through three notes
+		HAL_GPIO_TogglePin(myLed_GPIO_Port, myLed_Pin); // toggle LED
 
+
+	}
+}
+
+// Handler for timer interrupt
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
+
+}
 
 /* USER CODE END 0 */
 
@@ -94,17 +115,20 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
   MX_DAC1_Init();
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
 
   // Initialize DAC
   HAL_DACEx_SelfCalibrate(&hdac1, &sConfigGlobal, DAC1_CHANNEL_1);
-  HAL_DACEx_SelfCalibrate(&hdac1, &sConfigGlobal, DAC1_CHANNEL_2);
+  //HAL_DACEx_SelfCalibrate(&hdac1, &sConfigGlobal, DAC1_CHANNEL_2);//from part 1
 
-  // Start DAC
+
+  // Start DAC and timer
   HAL_DAC_Start(&hdac1, DAC1_CHANNEL_1);
-  HAL_DAC_Start(&hdac1, DAC1_CHANNEL_2);
+  //HAL_DAC_Start(&hdac1, DAC1_CHANNEL_2);//from part 1
+  HAL_TIM_Base_Start_IT(&htim2); //Start the timer in interrupt mode
 
 
   // ----------------------------------------------------------------------------------------------------------------------------------------
@@ -115,28 +139,28 @@ int main(void)
    * 8 discrete values for triangle wave (as in lab doc example)
    */
   // Variables for triangle wave
-  int triangle_wave_value = 0;
-  int triangle_wave_increment = -2; // start negative because sign will flip in first
-  uint32_t triangle_signal;
-
-  // Variables for saw wave
-  int saw_wave_value = 0;
-  int saw_wave_increment = 1;
-  uint32_t saw_signal;
-
-  int saw_tri_samples_per_period = 8;
-
-  // Variables for sine wave
-  float sine_wave_value;
-  uint32_t sine_wave_signal;
-  int sine_radians = 0; // value [0,sine_cylces] which when multiplied by 2*PI/sine_samples_per_period will return radians for sine output
-  int sine_samples_per_period = 8;
-
-  // Variables for input/output
-  char status = 1; // status 1 is saw, 0 is triangle
-  int saw_multiplier = 585; // signal multiplier (should make signal = 4095 for max voltage @ 12-bit resolution, max value for saw and tri is 7 and 7*585 = 4095)
-  int tri_multiplier = 512; // makes signal 4096, will subtract 1 from end value
-  int sine_multiplier = 2048; // max signal output 2, so this makes max DAC value 4096 (will subtract one from signal for 4095)
+//  int triangle_wave_value = 0;
+//  int triangle_wave_increment = -2; // start negative because sign will flip in first
+//  uint32_t triangle_signal;
+//
+//  // Variables for saw wave
+//  int saw_wave_value = 0;
+//  int saw_wave_increment = 1;
+//  uint32_t saw_signal;
+//
+//  int saw_tri_samples_per_period = 8;
+//
+//  // Variables for sine wave
+//  float sine_wave_value;
+//  uint32_t sine_wave_signal;
+//  int sine_radians = 0; // value [0,sine_cylces] which when multiplied by 2*PI/sine_samples_per_period will return radians for sine output
+//  int sine_samples_per_period = 8;
+//
+//  // Variables for input/output
+//  char status = 1; // status 1 is saw, 0 is triangle
+//  int saw_multiplier = 585; // signal multiplier (should make signal = 4095 for max voltage @ 12-bit resolution, max value for saw and tri is 7 and 7*585 = 4095)
+//  int tri_multiplier = 512; // makes signal 4096, will subtract 1 from end value
+//  int sine_multiplier = 2048; // max signal output 2, so this makes max DAC value 4096 (will subtract one from signal for 4095)
   // ----------------------------------------------------------------------------------------------------------------------------------------
   // Part 1 Code above
   // ----------------------------------------------------------------------------------------------------------------------------------------
@@ -152,65 +176,6 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-	  // ----------------------------------------------------------------------------------------------------------------------------------------
-	  // Part 1 Code below
-	  // ----------------------------------------------------------------------------------------------------------------------------------------
-	  // Increment triangle wave
-	  if (triangle_wave_value == saw_tri_samples_per_period || triangle_wave_value == 0) { // flip increment when at max and min
-		  triangle_wave_increment *= -1;
-	  }
-	  triangle_wave_value  += triangle_wave_increment;
-
-	  // Increment saw wave
-	  saw_wave_value += saw_wave_increment;
-	  saw_wave_value = saw_wave_value % saw_tri_samples_per_period;
-
-	  // Increment sine wave
-	  sine_radians += 1;
-	  sine_radians = sine_radians % sine_samples_per_period;
-
-	  // Get signal to pass to DAC (scaled up for larger voltage)
-	  triangle_signal = triangle_wave_value*tri_multiplier;
-	  saw_signal = saw_wave_value*saw_multiplier;
-
-	  // Output to DAC (this currently switches the signals to the output ports, but one of the ports is not working)
-	  // Comment out to show sine signal
-//	  status = HAL_GPIO_ReadPin(userButton_GPIO_Port, userButton_Pin);
-//	  if (status == 1) {
-//		  HAL_DAC_SetValue(&hdac1, DAC1_CHANNEL_2, DAC_ALIGN_12B_R, saw_signal);
-//		  //HAL_DAC_SetValue(&hdac1, DAC1_CHANNEL_1, DAC_ALIGN_12B_R, triangle_signal); // second output pin not working
-//	  } else {
-//		  if (triangle_signal == 4096) {triangle_signal -= 1;}
-//		  HAL_DAC_SetValue(&hdac1, DAC1_CHANNEL_2, DAC_ALIGN_12B_R, triangle_signal);
-//		  //HAL_DAC_SetValue(&hdac1, DAC1_CHANNEL_1, DAC_ALIGN_12B_R, saw_signal); // second output pin not working
-//	  }
-	  //HAL_Delay(1); delay 2ms for triangle and saw
-
-	  /*
-	   * Sine output
-	   * 14 cycles (~14ms period)
-	   * Commented out to show saw and triangle signals
-	   */
-	  sine_wave_value = arm_sin_f32(sine_radians*PI*2/(sine_samples_per_period)) + 1; // potentially add 1 for positive DAC output
-	  sine_wave_signal = sine_wave_value * sine_multiplier; // make max value 4095 (max for 12 bit DAC resolution)
-	  if (sine_wave_signal == 4096) {sine_wave_signal -= 1;}
-	  HAL_DAC_SetValue(&hdac1, DAC1_CHANNEL_2, DAC_ALIGN_12B_R, sine_wave_signal);
-	  HAL_Delay(1); // delay  2ms for sine wave (sample frequency is more than twice the signal frequency, so we meet nyquist criterion)
-	  // ----------------------------------------------------------------------------------------------------------------------------------------
-	  // Part 1 Code above
-	  // ----------------------------------------------------------------------------------------------------------------------------------------
-	  // ----------------------------------------------------------------------------------------------------------------------------------------
-	  // Part 2 Code below
-	  // ----------------------------------------------------------------------------------------------------------------------------------------
-
-
-
-
-
-
-
-
-
 
     /* USER CODE BEGIN 3 */
   }
@@ -338,9 +303,9 @@ static void MX_TIM2_Init(void)
 
   /* USER CODE END TIM2_Init 1 */
   htim2.Instance = TIM2;
-  htim2.Init.Prescaler = 60000;
+  htim2.Init.Prescaler = 0;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 4294967295;
+  htim2.Init.Period = 1814;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
@@ -361,6 +326,23 @@ static void MX_TIM2_Init(void)
   /* USER CODE BEGIN TIM2_Init 2 */
 
   /* USER CODE END TIM2_Init 2 */
+
+}
+
+/**
+  * Enable DMA controller clock
+  */
+static void MX_DMA_Init(void)
+{
+
+  /* DMA controller clock enable */
+  __HAL_RCC_DMAMUX1_CLK_ENABLE();
+  __HAL_RCC_DMA1_CLK_ENABLE();
+
+  /* DMA interrupt init */
+  /* DMA1_Channel1_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Channel1_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Channel1_IRQn);
 
 }
 
