@@ -46,7 +46,7 @@
 
 /* Private variables ---------------------------------------------------------*/
 DAC_HandleTypeDef hdac1;
-DMA_HandleTypeDef hdma_dac1_ch1;
+DMA_HandleTypeDef hdma_dac1_ch2;
 
 TIM_HandleTypeDef htim2;
 
@@ -56,9 +56,21 @@ UART_HandleTypeDef huart2;
 DAC_ChannelConfTypeDef sConfigGlobal;
 
 int note_selector; // [0, 2] to indicate if the note that should be played is C6 E6 or G6 respectively
-uint16_t note_data[672]; // array to hold DAC output of whichever note is currently being played
-int note_data_index; // index of above array to indicate which piece of data we are on
+/* 44.1 kHz sample rate
+ * C6 is 1kHz, so 44 samples per period
+ * E6 is 1.3kHz, so 33 samples per period
+ * G6 is 1.57Hz, so 28 samples per period
+ */
+uint16_t note_data[924]; // array to hold DAC output of whichever note is currently being played (924 is LCM of each note's number of samples for cicularity)
+int note_data_index; // index of above array to indicate which piece of data we are on (from step 2 of part 2)
+int C6_size = 44;
+int E6_size = 33;
+int G6_size = 28;
+uint16_t C6_data[44];
+uint16_t E6_data[33];
+uint16_t G6_data[28];
 
+char change_note = 0;
 
 int sine_wave_index; //[0, 43] 44.1 kHz sample rate, 1kHz desired sine wave, so one period every 44 samples
 float sine_wave_values[44];
@@ -94,21 +106,42 @@ PUTCHAR_PROTOTYPE
 // Handler for button interrupt
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) { // page 391 HAL driver manual
 	if (GPIO_Pin == userButton_Pin) { // verify that only the pin we want is starting this interrupt (good coding practice)
-		//note_selector = (note_selector + 1)%3; // cycle through three notes
-		HAL_GPIO_TogglePin(myLed_GPIO_Port, myLed_Pin); // toggle LED
+		note_selector = (note_selector + 1)%3; // cycle through three notes
+		change_note = 1; // raise flag so we know to change the note
+		HAL_GPIO_TogglePin(myLed_GPIO_Port, myLed_Pin); // toggle LED as user feedback for a successful button press
 
 
 	}
 }
 
 // Handler for timer interrupt
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
-	if (htim == &htim2) {
-		sine_wave_index = (sine_wave_index + 1)%44;
+//void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
+//	if (htim == &htim2) {
+//		sine_wave_index = (sine_wave_index + 1)%44;
+//
+//		HAL_DAC_SetValue(&hdac1, DAC1_CHANNEL_2, DAC_ALIGN_12B_R, (uint32_t) sine_wave_values[sine_wave_index]);
+//
+//		//note_data_index = (note_data_index + 1) % 15;
+//	}
+//}
 
-		HAL_DAC_SetValue(&hdac1, DAC1_CHANNEL_2, DAC_ALIGN_12B_R, (uint32_t) sine_wave_values[sine_wave_index]);
-
-		//note_data_index = (note_data_index + 1) % 15;
+// DMA
+void HAL_DAC_ConvCpltCallbackCh1(DAC_HandleTypeDef *hdac) {
+	if (change_note) {
+		if (note_selector == 0) { // C6
+			for (int i = 0; i < 924; i++) {
+				note_data[i] = C6_data[i%C6_size];
+			}
+		} else if (note_selector == 1) { // E6
+			for (int i = 0; i < 924; i++) {
+				note_data[i] = E6_data[i%E6_size];
+			}
+		} else if (note_selector == 2) { // G6
+			for (int i = 0; i < 924; i++) {
+				note_data[i] = G6_data[i%G6_size];
+			}
+		}
+		change_note = 0; // reset this flag so we know we don't need to change the note
 	}
 }
 
@@ -211,18 +244,54 @@ int main(void)
   // ----------------------------------------------------------------------------------------------------------------------------------------
 
 
-  // make sine array
-  for (sine_wave_index = 0; sine_wave_index < 44; sine_wave_index++) {
-	  sine_wave_values[sine_wave_index] = (arm_sin_f32(2*PI*sine_wave_index/44)+1)*(2047.5);
+  // make sine array (from step 2 of part 2)
+//  for (sine_wave_index = 0; sine_wave_index < 44; sine_wave_index++) {
+//	  sine_wave_values[sine_wave_index] = (arm_sin_f32(2*PI*sine_wave_index/44)+1)*(1365); //1365 multiplier as 4095 max output, max sine output of 2, scale down to 2/3 to reduce distortion (4095/2)*(2/3)
+//
+//  }
+//  printf("Sine array made.\n");
 
+
+
+  // make notes
+  for (int i = 0; i < C6_size; i++) {
+	  C6_data[i] = (arm_sin_f32(2*PI*i/C6_size)+1)*(1365); //1365 multiplier as 4095 max output, max sine output of 2, scale down to 2/3 to reduce distortion (4095/2)*(2/3)
   }
-  printf("Sine array made.\n");
+  for (int i = 0; i < E6_size; i++) {
+  	  E6_data[i] = (arm_sin_f32(2*PI*i/E6_size)+1)*(1365); //1365 multiplier as 4095 max output, max sine output of 2, scale down to 2/3 to reduce distortion (4095/2)*(2/3)
+  }
+  for (int i = 0; i < G6_size; i++) {
+  	  G6_data[i] = (arm_sin_f32(2*PI*i/G6_size)+1)*(1365); //1365 multiplier as 4095 max output, max sine output of 2, scale down to 2/3 to reduce distortion (4095/2)*(2/3)
+  }
+
+
+
+
+  // Start DMa
+  HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_2, (uint32_t*)note_data, (uint32_t) 924, DAC_ALIGN_12B_R);
+  // initialize note_data for C6 to start
+  for (int i = 0; i < 924; i++) {
+	  note_data[i] = C6_data[i%C6_size];
+  }
+
+
+  printf("DMA started\n");
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+
+
+
+
+
+
+
+
+
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -436,9 +505,9 @@ static void MX_DMA_Init(void)
   __HAL_RCC_DMA1_CLK_ENABLE();
 
   /* DMA interrupt init */
-  /* DMA1_Channel1_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA1_Channel1_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(DMA1_Channel1_IRQn);
+  /* DMA1_Channel2_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Channel2_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Channel2_IRQn);
 
 }
 
