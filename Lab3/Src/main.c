@@ -57,10 +57,11 @@ DAC_ChannelConfTypeDef sConfigGlobal;
 
 /*
  * Part 2 variables
- * 44.1 kHz sample rate (done with 1814 counter period bc of
+ * 44.1 kHz sample rate (done with 2721 counter period which is clock frequency/desired sample rate)
+ * 22 kHz max (to satisfy Nyquist criterion)
  */
 int note_selector; // [0, 2] to indicate if the note that should be played is C6 E6 or G6 respectively
-uint16_t note_data[924]; // array to hold DAC output of whichever note is currently being played (924 is LCM of each note's number of samples for cicularity)
+//uint16_t note_data[924]; // array to hold DAC output of whichever note is currently being played (924 is LCM of each note's number of samples for cicularity)
 int note_data_index; // index of above array to indicate which piece of data we are on (from step 2 of part 2)
 int C6_size = 44; // C6 is 1kHz, so 44 samples per period
 int E6_size = 33; // E6 is 1.3kHz, so 33 samples per period
@@ -69,7 +70,7 @@ uint16_t C6_data[44];
 uint16_t E6_data[33];
 uint16_t G6_data[28];
 
-char change_note = 0;
+//char change_note = 0;
 
 
 /*
@@ -110,10 +111,20 @@ PUTCHAR_PROTOTYPE
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) { // page 391 HAL driver manual
 	if (GPIO_Pin == userButton_Pin) { // verify that only the pin we want is starting this interrupt (good coding practice)
 		note_selector = (note_selector + 1)%3; // cycle through three notes
-		change_note = 1; // raise flag so we know to change the note
-		HAL_GPIO_TogglePin(myLed_GPIO_Port, myLed_Pin); // toggle LED as user feedback for a successful button press
-		printf("Need to change note\n");
+		// change note
+		HAL_DAC_Stop_DMA(&hdac1, DAC_CHANNEL_1);
+		if (note_selector == 0) { // C6
+			HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t*) C6_data, (uint32_t) C6_size, DAC_ALIGN_12B_R);
+			printf("C6\n");
+		} else if (note_selector == 1) { // E6
+			HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t*) E6_data, (uint32_t) E6_size, DAC_ALIGN_12B_R);
+			printf("E6\n");
+		} else if (note_selector == 2) { // G6
+			HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t*) G6_data, (uint32_t) G6_size, DAC_ALIGN_12B_R);
+			printf("G6\n");
+		}
 
+		HAL_GPIO_TogglePin(myLed_GPIO_Port, myLed_Pin); // toggle LED as user feedback for a successful button press
 	}
 }
 
@@ -128,27 +139,26 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) { // page 391 HAL driver manual
 //	}
 //}
 
-// DMA
-void HAL_DAC_ConvCpltCallbackCh1(DAC_HandleTypeDef *hdac) {
-	printf("Interrupt\n");
-	if (change_note) {
-		if (note_selector == 0) { // C6
-			for (int i = 0; i < 924; i++) {
-				note_data[i] = C6_data[i%C6_size];
-			}
-		} else if (note_selector == 1) { // E6
-			for (int i = 0; i < 924; i++) {
-				note_data[i] = E6_data[i%E6_size];
-			}
-		} else if (note_selector == 2) { // G6
-			for (int i = 0; i < 924; i++) {
-				note_data[i] = G6_data[i%G6_size];
-			}
-		}
-		change_note = 0; // reset this flag so we know we don't need to change the note
-		printf("Note Changed\n");
-	}
-}
+// DMA *** This is totally unnecessary, can just restart DMA process with button press
+//void HAL_DAC_ConvCpltCallbackCh1(DAC_HandleTypeDef *hdac) {
+//	if (change_note) {
+//		if (note_selector == 0) { // C6
+//			for (int i = 0; i < 924; i++) {
+//				note_data[i] = C6_data[i%C6_size];
+//			}
+//		} else if (note_selector == 1) { // E6
+//			for (int i = 0; i < 924; i++) {
+//				note_data[i] = E6_data[i%E6_size];
+//			}
+//		} else if (note_selector == 2) { // G6
+//			for (int i = 0; i < 924; i++) {
+//				note_data[i] = G6_data[i%G6_size];
+//			}
+//		}
+//		change_note = 0; // reset this flag so we know we don't need to change the note
+//		printf("Note Changed\n");
+//	}
+//}
 
 // for printf
 int _write(int file, char *ptr, int len) {
@@ -271,12 +281,12 @@ int main(void)
 
 
 
-  // initialize note_data for C6 to start
-    for (int i = 0; i < 924; i++) {
-  	  note_data[i] = C6_data[i%C6_size];
-    }
+  // initialize note_data for C6 to start ** from old way of doing it
+//    for (int i = 0; i < 924; i++) {
+//  	  note_data[i] = C6_data[i%C6_size];
+//    }
   // Start DAC with DMA
-  HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t*)note_data, (uint32_t) 924, DAC_ALIGN_12B_R);
+  HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t*) C6_data, (uint32_t) C6_size, DAC_ALIGN_12B_R);
 
 
 
