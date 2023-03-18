@@ -178,7 +178,7 @@ int _write(int file, char *ptr, int len) {
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-	note_selector = 0; // [0, 2] to indicate if the note that should be played is C6 E6 or G6 respectively
+	note_selector = 2; // [0, 2] to indicate if the note that should be played is C6 E6 or G6 respectively
 
 	note_data_index = 0; // index of above array to indicate which piece of data we are on (for step 2 of part 2)
 
@@ -286,7 +286,7 @@ int main(void)
 //  	  note_data[i] = C6_data[i%C6_size];
 //    }
   // Start DAC with DMA
-  HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t*) C6_data, (uint32_t) C6_size, DAC_ALIGN_12B_R);
+  //HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t*) C6_data, (uint32_t) C6_size, DAC_ALIGN_12B_R);
 
 
 
