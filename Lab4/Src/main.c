@@ -108,7 +108,7 @@ int main(void)
   BSP_ACCELERO_Init();
 
   // UART initialization
-  HAL_StatusTypeDef UART_status;
+//  HAL_StatusTypeDef UART_status;
   HAL_UART_Init(&huart1);
 
   // set up variables to hold I2C data
@@ -123,7 +123,8 @@ int main(void)
 
 
 	  BSP_ACCELERO_AccGetXYZ(accelerometer_xyz);
-	  UART_status = HAL_UART_Transmit(&huart1, (uint8_t*) str, (uint16_t) strlen(str), 10000);
+
+	  HAL_UART_Transmit(&huart1, (uint8_t*) str, (uint16_t) strlen(str), 10000); // inputs HandleTypeDef, data, data size, timeout
 	  HAL_Delay(100);
 
 

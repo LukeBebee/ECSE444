@@ -28,19 +28,19 @@ Src/main.o: ../Src/main.c ../Inc/main.h \
  ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_pwr_ex.h \
  ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_uart.h \
  ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_uart_ex.h \
- /Users/chefluke/STM32Cube/ECSE444/Lab4/Inc/B-L4S5I-IOT01/stm32l4s5i_iot01_accelero.h \
- /Users/chefluke/STM32Cube/ECSE444/Lab4/Inc/B-L4S5I-IOT01/stm32l4s5i_iot01.h \
- /Users/chefluke/STM32Cube/ECSE444/Lab4/Inc/B-L4S5I-IOT01/../Components/lsm6dsl/lsm6dsl.h \
- /Users/chefluke/STM32Cube/ECSE444/Lab4/Inc/B-L4S5I-IOT01/../Components/lsm6dsl/../Common/accelero.h \
- /Users/chefluke/STM32Cube/ECSE444/Lab4/Inc/B-L4S5I-IOT01/../Components/lsm6dsl/../Common/gyro.h \
- /Users/chefluke/STM32Cube/ECSE444/Lab4/Inc/B-L4S5I-IOT01/stm32l4s5i_iot01_gyro.h \
- /Users/chefluke/STM32Cube/ECSE444/Lab4/Inc/B-L4S5I-IOT01/stm32l4s5i_iot01_hsensor.h \
- /Users/chefluke/STM32Cube/ECSE444/Lab4/Inc/B-L4S5I-IOT01/../Components/hts221/hts221.h \
- /Users/chefluke/STM32Cube/ECSE444/Lab4/Inc/B-L4S5I-IOT01/../Components/hts221/../Common/hsensor.h \
- /Users/chefluke/STM32Cube/ECSE444/Lab4/Inc/B-L4S5I-IOT01/../Components/hts221/../Common/tsensor.h \
- /Users/chefluke/STM32Cube/ECSE444/Lab4/Inc/B-L4S5I-IOT01/stm32l4s5i_iot01_magneto.h \
- /Users/chefluke/STM32Cube/ECSE444/Lab4/Inc/B-L4S5I-IOT01/../Components/lis3mdl/lis3mdl.h \
- /Users/chefluke/STM32Cube/ECSE444/Lab4/Inc/B-L4S5I-IOT01/../Components/lis3mdl/../Common/magneto.h
+ /Users/chefluke/STM32Cube/ECSE444/Lab4/Drivers/BSP/B-L4S5I-IOT01/stm32l4s5i_iot01_accelero.h \
+ /Users/chefluke/STM32Cube/ECSE444/Lab4/Drivers/BSP/B-L4S5I-IOT01/stm32l4s5i_iot01.h \
+ /Users/chefluke/STM32Cube/ECSE444/Lab4/Drivers/BSP/B-L4S5I-IOT01/../Components/lsm6dsl/lsm6dsl.h \
+ /Users/chefluke/STM32Cube/ECSE444/Lab4/Drivers/BSP/B-L4S5I-IOT01/../Components/lsm6dsl/../Common/accelero.h \
+ /Users/chefluke/STM32Cube/ECSE444/Lab4/Drivers/BSP/B-L4S5I-IOT01/../Components/lsm6dsl/../Common/gyro.h \
+ /Users/chefluke/STM32Cube/ECSE444/Lab4/Drivers/BSP/B-L4S5I-IOT01/stm32l4s5i_iot01_gyro.h \
+ /Users/chefluke/STM32Cube/ECSE444/Lab4/Drivers/BSP/B-L4S5I-IOT01/stm32l4s5i_iot01_hsensor.h \
+ /Users/chefluke/STM32Cube/ECSE444/Lab4/Drivers/BSP/B-L4S5I-IOT01/../Components/hts221/hts221.h \
+ /Users/chefluke/STM32Cube/ECSE444/Lab4/Drivers/BSP/B-L4S5I-IOT01/../Components/hts221/../Common/hsensor.h \
+ /Users/chefluke/STM32Cube/ECSE444/Lab4/Drivers/BSP/B-L4S5I-IOT01/../Components/hts221/../Common/tsensor.h \
+ /Users/chefluke/STM32Cube/ECSE444/Lab4/Drivers/BSP/B-L4S5I-IOT01/stm32l4s5i_iot01_magneto.h \
+ /Users/chefluke/STM32Cube/ECSE444/Lab4/Drivers/BSP/B-L4S5I-IOT01/../Components/lis3mdl/lis3mdl.h \
+ /Users/chefluke/STM32Cube/ECSE444/Lab4/Drivers/BSP/B-L4S5I-IOT01/../Components/lis3mdl/../Common/magneto.h
 ../Inc/main.h:
 ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal.h:
 ../Inc/stm32l4xx_hal_conf.h:
@@ -71,16 +71,16 @@ Src/main.o: ../Src/main.c ../Inc/main.h \
 ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_pwr_ex.h:
 ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_uart.h:
 ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_uart_ex.h:
-/Users/chefluke/STM32Cube/ECSE444/Lab4/Inc/B-L4S5I-IOT01/stm32l4s5i_iot01_accelero.h:
-/Users/chefluke/STM32Cube/ECSE444/Lab4/Inc/B-L4S5I-IOT01/stm32l4s5i_iot01.h:
-/Users/chefluke/STM32Cube/ECSE444/Lab4/Inc/B-L4S5I-IOT01/../Components/lsm6dsl/lsm6dsl.h:
-/Users/chefluke/STM32Cube/ECSE444/Lab4/Inc/B-L4S5I-IOT01/../Components/lsm6dsl/../Common/accelero.h:
-/Users/chefluke/STM32Cube/ECSE444/Lab4/Inc/B-L4S5I-IOT01/../Components/lsm6dsl/../Common/gyro.h:
-/Users/chefluke/STM32Cube/ECSE444/Lab4/Inc/B-L4S5I-IOT01/stm32l4s5i_iot01_gyro.h:
-/Users/chefluke/STM32Cube/ECSE444/Lab4/Inc/B-L4S5I-IOT01/stm32l4s5i_iot01_hsensor.h:
-/Users/chefluke/STM32Cube/ECSE444/Lab4/Inc/B-L4S5I-IOT01/../Components/hts221/hts221.h:
-/Users/chefluke/STM32Cube/ECSE444/Lab4/Inc/B-L4S5I-IOT01/../Components/hts221/../Common/hsensor.h:
-/Users/chefluke/STM32Cube/ECSE444/Lab4/Inc/B-L4S5I-IOT01/../Components/hts221/../Common/tsensor.h:
-/Users/chefluke/STM32Cube/ECSE444/Lab4/Inc/B-L4S5I-IOT01/stm32l4s5i_iot01_magneto.h:
-/Users/chefluke/STM32Cube/ECSE444/Lab4/Inc/B-L4S5I-IOT01/../Components/lis3mdl/lis3mdl.h:
-/Users/chefluke/STM32Cube/ECSE444/Lab4/Inc/B-L4S5I-IOT01/../Components/lis3mdl/../Common/magneto.h:
+/Users/chefluke/STM32Cube/ECSE444/Lab4/Drivers/BSP/B-L4S5I-IOT01/stm32l4s5i_iot01_accelero.h:
+/Users/chefluke/STM32Cube/ECSE444/Lab4/Drivers/BSP/B-L4S5I-IOT01/stm32l4s5i_iot01.h:
+/Users/chefluke/STM32Cube/ECSE444/Lab4/Drivers/BSP/B-L4S5I-IOT01/../Components/lsm6dsl/lsm6dsl.h:
+/Users/chefluke/STM32Cube/ECSE444/Lab4/Drivers/BSP/B-L4S5I-IOT01/../Components/lsm6dsl/../Common/accelero.h:
+/Users/chefluke/STM32Cube/ECSE444/Lab4/Drivers/BSP/B-L4S5I-IOT01/../Components/lsm6dsl/../Common/gyro.h:
+/Users/chefluke/STM32Cube/ECSE444/Lab4/Drivers/BSP/B-L4S5I-IOT01/stm32l4s5i_iot01_gyro.h:
+/Users/chefluke/STM32Cube/ECSE444/Lab4/Drivers/BSP/B-L4S5I-IOT01/stm32l4s5i_iot01_hsensor.h:
+/Users/chefluke/STM32Cube/ECSE444/Lab4/Drivers/BSP/B-L4S5I-IOT01/../Components/hts221/hts221.h:
+/Users/chefluke/STM32Cube/ECSE444/Lab4/Drivers/BSP/B-L4S5I-IOT01/../Components/hts221/../Common/hsensor.h:
+/Users/chefluke/STM32Cube/ECSE444/Lab4/Drivers/BSP/B-L4S5I-IOT01/../Components/hts221/../Common/tsensor.h:
+/Users/chefluke/STM32Cube/ECSE444/Lab4/Drivers/BSP/B-L4S5I-IOT01/stm32l4s5i_iot01_magneto.h:
+/Users/chefluke/STM32Cube/ECSE444/Lab4/Drivers/BSP/B-L4S5I-IOT01/../Components/lis3mdl/lis3mdl.h:
+/Users/chefluke/STM32Cube/ECSE444/Lab4/Drivers/BSP/B-L4S5I-IOT01/../Components/lis3mdl/../Common/magneto.h:
