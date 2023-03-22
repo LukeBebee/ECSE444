@@ -123,9 +123,11 @@ int main(void)
 
 
 	  BSP_ACCELERO_AccGetXYZ(accelerometer_xyz);
+	  sprintf(str, "\rAccelerometer X: %i, Accelerometer Y: %i, Accelerometer Z: %i", accelerometer_xyz[0], accelerometer_xyz[1], accelerometer_xyz[2]);
+
 
 	  HAL_UART_Transmit(&huart1, (uint8_t*) str, (uint16_t) strlen(str), 10000); // inputs HandleTypeDef, data, data size, timeout
-	  HAL_Delay(100);
+	  HAL_Delay(100); // for 10Hz sample rate
 
 
 
