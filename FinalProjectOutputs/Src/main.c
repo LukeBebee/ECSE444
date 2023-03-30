@@ -102,10 +102,9 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) { // page 391 HAL driver manual
 
 void updateMorseLetter(char letter){
 
-	// quad dash will represent a space for this project
+	// \0 for space
 	morseLetterSize = 4;
-	morseLetter[0] = '-'; morseLetter[1] = '-'; morseLetter[2] = '-'; morseLetter[3] = '-';
-
+	morseLetter[0] = '\0'; morseLetter[1] = '\0'; morseLetter[2] = '\0'; morseLetter[3] = '\0';
 	switch (letter) {
 	case 'a':
 		morseLetter[0] = '.'; morseLetter[1] = '-';
@@ -126,6 +125,36 @@ void printMorseLetter() {
 	}
 }
 
+char getLetterFromMorse(char *morseArray, int morseArraySize) {
+	char nullChar = '\0';
+	switch (morseArraySize)
+	{
+		case 1: // single char Morse Codes
+			; // weird c thing  but we technically need this semicolon
+			char morse1 = morseArray[0];
+
+			switch (morse1) {
+			case '.':
+				return 'E';
+			case '-':
+				return 'T';
+			default:
+				return nullChar;
+			}
+
+		case 2: // double char Morse Codes
+
+
+		case 3: // triple char Morse Codes
+
+
+		case 4: // quad char Morse Codes
+
+		default:
+			return nullChar;
+	}
+}
+
 /* USER CODE END 0 */
 
 /**
@@ -135,6 +164,14 @@ void printMorseLetter() {
 int main(void)
 {
   /* USER CODE BEGIN 1 */
+	/*
+	 * mode 0 for taking input from terminal, outputting Morse code
+	 * mode 1 for taking input of array for Morse letter, displaying letter to terminal
+	 */
+char mode = 1;
+char morseInputArray[4] = {'.', '\0', '\0', '\0'};
+int morseInputArraySize = 1;
+char letterToPrint;
 
   /* USER CODE END 1 */
 
@@ -168,17 +205,29 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  printf("Input a character: ");
-	  scanf(" %c\n\r", &inputChar);
-	  printf("You entered: %c \n\r", inputChar); // print character
-	  //printf("ASCII Character: %d \n\r", inputChar); // print ASCII character
+	  if (mode == 0) { // taking input from terminal, outputting Morse code
+		  printf("Input a character: ");
+		  scanf(" %c ", &inputChar);
+		  printf("\n\r You entered: %c \n\r", inputChar); // print character
+		  //printf("ASCII Character: %d \n\r", inputChar); // print ASCII character
 
-	  updateMorseLetter(inputChar);
-	  printf("Morse Translation: ");
-	  printMorseLetter();
-	  printf("\n\r");
+		  updateMorseLetter(inputChar);
+		  printf("Morse Translation: ");
+		  printMorseLetter();
+		  printf("\n\r");
 
-	  HAL_Delay(1000);
+		  HAL_Delay(1000);
+	  }
+
+	  if (mode == 1) { // taking input of array for Morse letter, displaying letter to terminal
+
+		  letterToPrint = getLetterFromMorse(morseInputArray, morseInputArraySize);
+
+		  printf("Letter from  array: %c \n\r", letterToPrint);
+		  HAL_Delay(5000);
+	  }
+
+
 
     /* USER CODE END WHILE */
 
