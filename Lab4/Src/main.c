@@ -18,6 +18,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "cmsis_os.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -26,6 +27,7 @@
 #include <stm32l4s5i_iot01_gyro.h>
 #include <stm32l4s5i_iot01_hsensor.h>
 #include <stm32l4s5i_iot01_magneto.h>
+
 #include <string.h>
 /* USER CODE END Includes */
 
@@ -48,6 +50,11 @@ I2C_HandleTypeDef hi2c2;
 
 UART_HandleTypeDef huart1;
 
+osThreadId readSensorHandle;
+osThreadId handleButtonHandle;
+osThreadId printSerialHandle;
+osMutexId bufMutexHandle;
+osMutexId sensorMutexHandle;
 /* USER CODE BEGIN PV */
 // printf stuff
 #ifdef __GNUC__
@@ -56,13 +63,26 @@ UART_HandleTypeDef huart1;
 #define PUTCHAR_PROTOTYPE int fputc(int ch, FILE *f)
 #endif
 
+#define MAX_BUF 50
+
 PUTCHAR_PROTOTYPE
 {
   HAL_UART_Transmit(&huart1, (uint8_t *)&ch, 1, HAL_MAX_DELAY);
   return ch;
 }
 
-char str[100];
+// mode to indicate which sensor we are reading from
+char mode;
+
+// variables to hold sensor data
+float temp_read;
+uint16_t mag_read[3];
+float gyro_read[3];
+float bar_read;
+
+char button_pressed;
+
+//uint8_t buf[MAX_BUF];
 
 /* USER CODE END PV */
 
@@ -71,6 +91,10 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_I2C2_Init(void);
 static void MX_USART1_UART_Init(void);
+void StartReadSensor(void const * argument);
+void StartHandleButton(void const * argument);
+void StartPrintSerial(void const * argument);
+
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -78,14 +102,17 @@ static void MX_USART1_UART_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
+
+// not used once OS implemented
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) { // page 391 HAL driver manual
 	if (GPIO_Pin == userButton_Pin) { // verify that only the pin we want is starting this interrupt (good coding practice)
-
-		// print something
-
-		printf("That was easy.\n");
+		printf("Button Pressed. \n\r");
 		HAL_GPIO_TogglePin(Led1_GPIO_Port, Led1_Pin); // toggle LED as user feedback for a successful button press
+
+
+		button_pressed = 1;
 	}
+
 }
 
 
@@ -99,6 +126,8 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) { // page 391 HAL driver manual
 int main(void)
 {
   /* USER CODE BEGIN 1 */
+	mode = 0;
+	button_pressed = 0;
 
   /* USER CODE END 1 */
 
@@ -108,6 +137,11 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
+  // I2C initializations
+  BSP_TSENSOR_Init(); 	// Temperature sensor
+  BSP_MAGNETO_Init(); 	// Magnetometer
+  BSP_GYRO_Init();		// Gyroscope
+  BSP_PSENSOR_Init();	// Barometer
 
   /* USER CODE END Init */
 
@@ -123,22 +157,84 @@ int main(void)
   MX_I2C2_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
-  // I2C initializations
-  BSP_ACCELERO_Init();
 
-  // UART initialization
-//  HAL_StatusTypeDef UART_status;
 
-  // set up variables to hold I2C data
-  int16_t accelerometer_xyz[3];
 
+  printf("OS Starting\n\r");
+  printf("OS Starting\n\r");
+  printf("OS Starting\n\r");
+  printf("OS Starting\n\r");
+  printf("OS Starting\n\r");
   /* USER CODE END 2 */
 
+  /* Create the mutex(es) */
+  /* definition and creation of bufMutex */
+  osMutexDef(bufMutex);
+  bufMutexHandle = osMutexCreate(osMutex(bufMutex));
+
+  /* definition and creation of sensorMutex */
+  osMutexDef(sensorMutex);
+  sensorMutexHandle = osMutexCreate(osMutex(sensorMutex));
+
+  /* USER CODE BEGIN RTOS_MUTEX */
+  /* add mutexes, ... */
+  /* USER CODE END RTOS_MUTEX */
+
+  /* USER CODE BEGIN RTOS_SEMAPHORES */
+  /* add semaphores, ... */
+  /* USER CODE END RTOS_SEMAPHORES */
+
+  /* USER CODE BEGIN RTOS_TIMERS */
+  /* start timers, add new ones, ... */
+  /* USER CODE END RTOS_TIMERS */
+
+  /* USER CODE BEGIN RTOS_QUEUES */
+  /* add queues, ... */
+  /* USER CODE END RTOS_QUEUES */
+
+  /* Create the thread(s) */
+  /* definition and creation of readSensor */
+  osThreadDef(readSensor, StartReadSensor, osPriorityNormal, 0, 128);
+  readSensorHandle = osThreadCreate(osThread(readSensor), NULL);
+
+  /* definition and creation of handleButton */
+  osThreadDef(handleButton, StartHandleButton, osPriorityNormal, 0, 128);
+  handleButtonHandle = osThreadCreate(osThread(handleButton), NULL);
+
+  /* definition and creation of printSerial */
+  osThreadDef(printSerial, StartPrintSerial, osPriorityNormal, 0, 128);
+  printSerialHandle = osThreadCreate(osThread(printSerial), NULL);
+
+  /* USER CODE BEGIN RTOS_THREADS */
+  /* add threads, ... */
+  /* USER CODE END RTOS_THREADS */
+
+  /* Start scheduler */
+  osKernelStart();
+
+  /* We should never get here as control is now taken by the scheduler */
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
 
+	  // Not used once OS implemented
+//	  switch (mode){
+//	  		case 0:
+//	  			temp_read = BSP_TSENSOR_ReadTemp();
+//	  			printf("Temperature: %f\r", temp_read);
+//	  		case 1:
+//	  			BSP_MAGNETO_GetXYZ(&mag_read);
+//	  			printf("Magnetometer: [%d, %d, %d]\r", mag_read[0], mag_read[1], mag_read[2]);
+//	  		case 2:
+//	  			BSP_GYRO_GetXYZ(&gyro_read);
+//	  			printf("Gyroscope: [%f, %f, %f]\r", gyro_read[0], gyro_read[1], gyro_read[2]);
+//	  		case 3:
+//	  			bar_read = BSP_PSENSOR_ReadPressure();
+//	  			printf("Pressure: %f\r", bar_read);
+//	  		}
+//
+//	  HAL_Delay(100); // documentation says HAL_Delay() takes milliseconds as input, so this is a 10Hz sample rate
 
 
 
@@ -325,15 +421,139 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(Led1_GPIO_Port, &GPIO_InitStruct);
 
-  /* EXTI interrupt init*/
-  HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
-
 }
 
 /* USER CODE BEGIN 4 */
 
 /* USER CODE END 4 */
+
+/* USER CODE BEGIN Header_StartReadSensor */
+/**
+  * @brief  Function implementing the readSensor thread.
+  * @param  argument: Not used
+  * @retval None
+  */
+/* USER CODE END Header_StartReadSensor */
+void StartReadSensor(void const * argument)
+{
+  /* USER CODE BEGIN 5 */
+  /* Infinite loop */
+	for(;;) {
+		  osDelay(100); // 10 Hz sample rate
+
+
+		  // Get new readings
+		  if (mode == 0) {
+			  //printf("Reading temp \n\r");
+			  temp_read = BSP_TSENSOR_ReadTemp();
+		  } else if (mode == 1) {
+			  //printf("Reading magneto \n\r");
+			  BSP_MAGNETO_GetXYZ(&mag_read);
+		  } else if (mode == 2) {
+			  //printf("Reading gyro \n\r");
+			  BSP_GYRO_GetXYZ(&gyro_read);
+		  } else {
+			  //printf("Reading bsp \n\r");
+			  bar_read = BSP_PSENSOR_ReadPressure();
+		  }
+
+	  }
+  /* USER CODE END 5 */
+}
+
+/* USER CODE BEGIN Header_StartHandleButton */
+/**
+* @brief Function implementing the handleButton thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartHandleButton */
+void StartHandleButton(void const * argument)
+{
+  /* USER CODE BEGIN StartHandleButton */
+  /* Infinite loop */
+  for(;;) {
+	  osDelay(1); //1kHz
+
+
+	  // check if button was pressed and change mode
+  	  if (button_pressed == 1) {
+  		  mode = (mode + 1)%4;
+
+  		  switch (mode){
+  		  case 0:
+  			  printf("Now reading thermometer.\n\r");
+  		  case 1:
+  			  printf("Now reading gyroscope.\n\r");
+  		  case 2:
+  			  printf("Now reading magnetometer.\n\r");
+  		  case 3:
+  			  printf("Now reading barometer.\n\r");
+  		  }
+  		  button_pressed = 0;
+  	  }
+  }
+
+
+
+
+  /* USER CODE END StartHandleButton */
+}
+
+/* USER CODE BEGIN Header_StartPrintSerial */
+/**
+* @brief Function implementing the printSerial thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartPrintSerial */
+void StartPrintSerial(void const * argument)
+{
+  /* USER CODE BEGIN StartPrintSerial */
+  /* Infinite loop */
+  for(;;)
+  {
+	  osDelay(100);
+	  printf("Printing to serial terminal \n\r");
+
+	  	// Send to serial terminal
+//	    osMutexWait(bufMutexHandle, osWaitForever);
+
+	    if (mode == 0) {
+	    	printf("Thermometer: %f\n\r", temp_read);
+	    } else if (mode == 1) {
+	    	printf("Magnetometer: [%d, %d, %d]\n\r", mag_read[0], mag_read[1], mag_read[2]);
+	    } else if (mode == 2) {
+	    	printf("Gyroscope: [%f, %f, %f]\n\r", gyro_read[0], gyro_read[1], gyro_read[2]);
+	    } else {
+	    	printf("Barometer: %f\n\r", bar_read);
+	    }
+
+//	  	osMutexRelease(bufMutexHandle);
+  }
+  /* USER CODE END StartPrintSerial */
+}
+
+/**
+  * @brief  Period elapsed callback in non blocking mode
+  * @note   This function is called  when TIM6 interrupt took place, inside
+  * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
+  * a global variable "uwTick" used as application time base.
+  * @param  htim : TIM handle
+  * @retval None
+  */
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+  /* USER CODE BEGIN Callback 0 */
+
+  /* USER CODE END Callback 0 */
+  if (htim->Instance == TIM6) {
+    HAL_IncTick();
+  }
+  /* USER CODE BEGIN Callback 1 */
+
+  /* USER CODE END Callback 1 */
+}
 
 /**
   * @brief  This function is executed in case of error occurrence.
@@ -362,7 +582,7 @@ void assert_failed(uint8_t *file, uint32_t line)
 {
   /* USER CODE BEGIN 6 */
   /* User can add his own implementation to report the file name and line number,
-     ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
+     ex: printf("Wrong parameters value: file %s on line %d\n\r", file, line) */
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */
