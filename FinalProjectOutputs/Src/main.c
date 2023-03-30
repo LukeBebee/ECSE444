@@ -75,10 +75,14 @@ GETCHAR_PROTOTYPE
 }
 
 
-
+// for mode 0
 char inputChar;
 int morseLetterSize;
 char morseLetter[4];
+
+// for mode 1
+char morseInputArray[4] = {'.', '\0', '\0', '\0'};
+int morseInputArraySize = 1;
 
 
 /* USER CODE END PV */
@@ -105,13 +109,16 @@ void updateMorseLetter(char letter){
 	// \0 for space
 	morseLetterSize = 4;
 	morseLetter[0] = '\0'; morseLetter[1] = '\0'; morseLetter[2] = '\0'; morseLetter[3] = '\0';
-	switch (letter) {
-	case 'a':
-		morseLetter[0] = '.'; morseLetter[1] = '-';
-		morseLetterSize = 2;
-	case 'b':
+	switch (letter)
+	{
+		case 'a':
+			morseLetter[0] = '.'; morseLetter[1] = '-';
+			morseLetterSize = 2;
+			break;
+		case 'b':
 			morseLetter[0] = '-'; morseLetter[1] = '.'; morseLetter[2] = '.'; morseLetter[3] = '.';
 			morseLetterSize = 4;
+			break;
 	}
 }
 
@@ -150,6 +157,7 @@ char getLetterFromMorse(char *morseArray, int morseArraySize) {
 
 		case 4: // quad char Morse Codes
 
+
 		default:
 			return nullChar;
 	}
@@ -168,9 +176,14 @@ int main(void)
 	 * mode 0 for taking input from terminal, outputting Morse code
 	 * mode 1 for taking input of array for Morse letter, displaying letter to terminal
 	 */
-char mode = 1;
-char morseInputArray[4] = {'.', '\0', '\0', '\0'};
-int morseInputArraySize = 1;
+char mode = 0;
+
+
+morseInputArray[0] = '.';
+morseInputArray[1] = '\0';
+morseInputArray[2] = '\0';
+morseInputArray[3] = '\0';
+morseInputArraySize = 1;
 char letterToPrint;
 
   /* USER CODE END 1 */
@@ -199,6 +212,8 @@ char letterToPrint;
   /* USER CODE BEGIN 2 */
 
 
+
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -207,8 +222,8 @@ char letterToPrint;
   {
 	  if (mode == 0) { // taking input from terminal, outputting Morse code
 		  printf("Input a character: ");
-		  scanf(" %c ", &inputChar);
-		  printf("\n\r You entered: %c \n\r", inputChar); // print character
+		  scanf("%c", &inputChar);
+		  printf("\n\rYou entered: %c \n\r", inputChar); // print character
 		  //printf("ASCII Character: %d \n\r", inputChar); // print ASCII character
 
 		  updateMorseLetter(inputChar);
@@ -217,6 +232,7 @@ char letterToPrint;
 		  printf("\n\r");
 
 		  HAL_Delay(1000);
+
 	  }
 
 	  if (mode == 1) { // taking input of array for Morse letter, displaying letter to terminal
