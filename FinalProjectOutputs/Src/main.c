@@ -19,11 +19,12 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 
-
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
 #include <string.h>
+#define ARM_MATH_CM4
+#include "arm_math.h"
 
 /* USER CODE END Includes */
 
@@ -42,6 +43,11 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+DAC_HandleTypeDef hdac1;
+DMA_HandleTypeDef hdma_dac1_ch1;
+
+TIM_HandleTypeDef htim2;
+
 UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
@@ -79,18 +85,27 @@ GETCHAR_PROTOTYPE
 char inputChar;
 int morseLetterSize;
 char morseLetter[4];
+char mode;
 
 // for mode 1
 char morseInputArray[4] = {'.', '\0', '\0', '\0'};
 int morseInputArraySize = 1;
 
+// for speaker
+int dotArraySize = 44;
+uint16_t dotArray[44];
+int dashArraySize = 44;
+uint16_t dashArray[44];
 
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
+static void MX_DMA_Init(void);
 static void MX_USART1_UART_Init(void);
+static void MX_DAC1_Init(void);
+static void MX_TIM2_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -98,9 +113,16 @@ static void MX_USART1_UART_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) { // page 391 HAL driver manual
+	printf("Interrupt \n\r");
 	if (GPIO_Pin == userButton_Pin) { // verify that only the pin we want is starting this interrupt (good coding practice)
 		printf("Button Pressed. \n\r");
 		HAL_GPIO_TogglePin(led1_GPIO_Port, led1_Pin);
+		mode = (mode+1)%2;
+		if (mode == 1) {
+			printf("Taking input Morse input (array), displaying letter to terminal. \n\r");
+		} else {
+			printf("Taking letter input from terminal, outputting Morse. \n\r");
+		}
 	}
 }
 
@@ -119,17 +141,132 @@ void updateMorseLetter(char letter){
 			morseLetter[0] = '-'; morseLetter[1] = '.'; morseLetter[2] = '.'; morseLetter[3] = '.';
 			morseLetterSize = 4;
 			break;
+		case 'c':
+			morseLetter[0] = '-'; morseLetter[1] = '.'; morseLetter[2] = '-'; morseLetter[3] = '.';
+			morseLetterSize = 4;
+			break;
+		case 'd':
+			morseLetter[0] = '-'; morseLetter[1] = '.'; morseLetter[2] = '.';
+			morseLetterSize = 3;
+			break;
+		case 'e':
+			morseLetter[0] = '.';
+			morseLetterSize = 1;
+			break;
+		case 'f':
+			morseLetter[0] = '.'; morseLetter[1] = '.'; morseLetter[2] = '-'; morseLetter[3] = '.';
+			morseLetterSize = 4;
+			break;
+		case 'g':
+			morseLetter[0] = '-'; morseLetter[1] = '-'; morseLetter[2] = '.';
+			morseLetterSize = 3;
+			break;
+		case 'h':
+			morseLetter[0] = '.'; morseLetter[1] = '.'; morseLetter[2] = '.'; morseLetter[3] = '.';
+			morseLetterSize = 4;
+			break;
+		case 'i':
+			morseLetter[0] = '.'; morseLetter[1] = '.';
+			morseLetterSize = 2;
+			break;
+		case 'j':
+			morseLetter[0] = '.'; morseLetter[1] = '-'; morseLetter[2] = '-'; morseLetter[3] = '-';
+			morseLetterSize = 4;
+			break;
+		case 'k':
+			morseLetter[0] = '-'; morseLetter[1] = '.'; morseLetter[2] = '-';
+			morseLetterSize = 3;
+			break;
+		case 'l':
+			morseLetter[0] = '.'; morseLetter[1] = '-'; morseLetter[2] = '.'; morseLetter[3] = '.';
+			morseLetterSize = 4;
+			break;
+		case 'm':
+			morseLetter[0] = '-'; morseLetter[1] = '-';
+			morseLetterSize = 2;
+			break;
+		case 'n':
+			morseLetter[0] = '-'; morseLetter[1] = '.';
+			morseLetterSize = 2;
+			break;
+		case 'o':
+			morseLetter[0] = '-'; morseLetter[1] = '-'; morseLetter[2] = '-';
+			morseLetterSize = 3;
+			break;
+		case 'p':
+			morseLetter[0] = '.'; morseLetter[1] = '-'; morseLetter[2] = '-'; morseLetter[3] = '.';
+			morseLetterSize = 4;
+			break;
+		case 'q':
+			morseLetter[0] = '-'; morseLetter[1] = '-'; morseLetter[2] = '.'; morseLetter[3] = '-';
+			morseLetterSize = 4;
+			break;
+		case 'r':
+			morseLetter[0] = '.'; morseLetter[1] = '-'; morseLetter[2] = '.';
+			morseLetterSize = 3;
+			break;
+		case 's':
+			morseLetter[0] = '.'; morseLetter[1] = '.'; morseLetter[2] = '.';
+			morseLetterSize = 3;
+			break;
+		case 't':
+			morseLetter[0] = '-';
+			morseLetterSize = 1;
+			break;
+		case 'u':
+			morseLetter[0] = '.'; morseLetter[1] = '.'; morseLetter[2] = '-';
+			morseLetterSize = 3;
+			break;
+		case 'v':
+			morseLetter[0] = '.'; morseLetter[1] = '.'; morseLetter[2] = '.'; morseLetter[3] = '-';
+			morseLetterSize = 4;
+			break;
+		case 'w':
+			morseLetter[0] = '.'; morseLetter[1] = '-'; morseLetter[2] = '-';
+			morseLetterSize = 3;
+			break;
+		case 'x':
+			morseLetter[0] = '-'; morseLetter[1] = '.'; morseLetter[2] = '.'; morseLetter[3] = '-';
+			morseLetterSize = 4;
+			break;
+		case 'y':
+			morseLetter[0] = '-'; morseLetter[1] = '.'; morseLetter[2] = '-'; morseLetter[3] = '-';
+			morseLetterSize = 4;
+			break;
+		case 'z':
+			morseLetter[0] = '-'; morseLetter[1] = '-'; morseLetter[2] = '.'; morseLetter[3] = '.';
+			morseLetterSize = 4;
 	}
 }
 
 void printMorseLetter() {
-	if (morseLetter[0] == '-' && morseLetter[1] == '-' && morseLetter[2] == '-' && morseLetter[3] == '-') {
+	if (morseLetter[0] == '\0') {
 		printf(" *space* ");
 	} else {
 		for (int i = 0; i < morseLetterSize; i++){
 			printf("%c", morseLetter[i]);
 		}
 	}
+}
+
+void playMorseToSpeaker(char *morseArray, int morseArraySize) {
+	for (int i = 0; i < morseArraySize; i++) {
+		if (morseArray[i] == '.') {
+			HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t*) *dotArray, (uint32_t) dotArraySize, DAC_ALIGN_12B_R);
+			HAL_Delay(300);
+			HAL_DAC_Stop_DMA(&hdac1, DAC_CHANNEL_1);
+			HAL_Delay(300);
+		} else if (morseArray[i] == '-') {
+			HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t*) *dashArray, (uint32_t) dashArraySize, DAC_ALIGN_12B_R);
+			HAL_Delay(600);
+			HAL_DAC_Stop_DMA(&hdac1, DAC_CHANNEL_1);
+			HAL_Delay(300);
+		} else {
+			return;
+		}
+		printf("\n\r");
+	}
+
 }
 
 char getLetterFromMorse(char *morseArray, int morseArraySize) {
@@ -176,7 +313,7 @@ int main(void)
 	 * mode 0 for taking input from terminal, outputting Morse code
 	 * mode 1 for taking input of array for Morse letter, displaying letter to terminal
 	 */
-char mode = 0;
+mode = 0;
 
 
 morseInputArray[0] = '.';
@@ -185,6 +322,12 @@ morseInputArray[2] = '\0';
 morseInputArray[3] = '\0';
 morseInputArraySize = 1;
 char letterToPrint;
+
+
+
+
+
+
 
   /* USER CODE END 1 */
 
@@ -208,11 +351,24 @@ char letterToPrint;
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
   MX_USART1_UART_Init();
+  MX_DAC1_Init();
+  MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
 
+  //HAL_DACEx_SelfCalibrate(&hdac1, &sConfigGlobal, DAC1_CHANNEL_1);
+  HAL_TIM_Base_Start_IT(&htim2);
 
-
+  /*
+   * Initialize beeps
+   */
+  for (int i = 0; i < dotArraySize; i++) {
+	  dotArray[i] = (arm_sin_f32(2*PI*i/dotArraySize)+1)*(1365); // 1365 multiplier as 4095 max output, max sine output of 2, scale down to 2/3 to reduce distortion (4095/2)*(2/3)
+  }
+  for (int i = 0; i < dashArraySize; i++) {
+  	  dashArray[i] = (arm_sin_f32(2*PI*i/dashArraySize)+1)*(1365); // 1365 multiplier as 4095 max output, max sine output of 2, scale down to 2/3 to reduce distortion (4095/2)*(2/3)
+    }
 
   /* USER CODE END 2 */
 
@@ -231,6 +387,7 @@ char letterToPrint;
 		  printMorseLetter();
 		  printf("\n\r");
 
+		  playMorseToSpeaker(morseLetter, morseLetterSize);
 		  HAL_Delay(1000);
 
 	  }
@@ -303,6 +460,95 @@ void SystemClock_Config(void)
 }
 
 /**
+  * @brief DAC1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_DAC1_Init(void)
+{
+
+  /* USER CODE BEGIN DAC1_Init 0 */
+
+  /* USER CODE END DAC1_Init 0 */
+
+  DAC_ChannelConfTypeDef sConfig = {0};
+
+  /* USER CODE BEGIN DAC1_Init 1 */
+
+  /* USER CODE END DAC1_Init 1 */
+
+  /** DAC Initialization
+  */
+  hdac1.Instance = DAC1;
+  if (HAL_DAC_Init(&hdac1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** DAC channel OUT1 config
+  */
+  sConfig.DAC_SampleAndHold = DAC_SAMPLEANDHOLD_DISABLE;
+  sConfig.DAC_Trigger = DAC_TRIGGER_T2_TRGO;
+  sConfig.DAC_HighFrequency = DAC_HIGH_FREQUENCY_INTERFACE_MODE_ABOVE_80MHZ;
+  sConfig.DAC_OutputBuffer = DAC_OUTPUTBUFFER_ENABLE;
+  sConfig.DAC_ConnectOnChipPeripheral = DAC_CHIPCONNECT_DISABLE;
+  sConfig.DAC_UserTrimming = DAC_TRIMMING_FACTORY;
+  if (HAL_DAC_ConfigChannel(&hdac1, &sConfig, DAC_CHANNEL_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN DAC1_Init 2 */
+
+  /* USER CODE END DAC1_Init 2 */
+
+}
+
+/**
+  * @brief TIM2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM2_Init(void)
+{
+
+  /* USER CODE BEGIN TIM2_Init 0 */
+
+  /* USER CODE END TIM2_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM2_Init 1 */
+
+  /* USER CODE END TIM2_Init 1 */
+  htim2.Instance = TIM2;
+  htim2.Init.Prescaler = 0;
+  htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim2.Init.Period = 2721;
+  htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_UPDATE;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM2_Init 2 */
+
+  /* USER CODE END TIM2_Init 2 */
+
+}
+
+/**
   * @brief USART1 Initialization Function
   * @param None
   * @retval None
@@ -351,6 +597,23 @@ static void MX_USART1_UART_Init(void)
 }
 
 /**
+  * Enable DMA controller clock
+  */
+static void MX_DMA_Init(void)
+{
+
+  /* DMA controller clock enable */
+  __HAL_RCC_DMAMUX1_CLK_ENABLE();
+  __HAL_RCC_DMA1_CLK_ENABLE();
+
+  /* DMA interrupt init */
+  /* DMA1_Channel1_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Channel1_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Channel1_IRQn);
+
+}
+
+/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
@@ -389,6 +652,10 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(led1_GPIO_Port, &GPIO_InitStruct);
+
+  /* EXTI interrupt init*/
+  HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
 
 }
 

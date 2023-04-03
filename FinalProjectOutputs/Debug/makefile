@@ -61,7 +61,7 @@ main-build: FinalProjectOutputs.elf secondary-outputs
 
 # Tool invocations
 FinalProjectOutputs.elf FinalProjectOutputs.map: $(OBJS) $(USER_OBJS) /Users/chefluke/STM32Cube/ECSE444/FinalProjectOutputs/STM32L4S5VITX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "FinalProjectOutputs.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"/Users/chefluke/STM32Cube/ECSE444/FinalProjectOutputs/STM32L4S5VITX_FLASH.ld" --specs=nosys.specs -Wl,-Map="FinalProjectOutputs.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -u _printf_float -u _scanf_float -Wl,--start-group -lc -lm -Wl,--end-group
+	arm-none-eabi-gcc -o "FinalProjectOutputs.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"/Users/chefluke/STM32Cube/ECSE444/FinalProjectOutputs/STM32L4S5VITX_FLASH.ld" --specs=nosys.specs -Wl,-Map="FinalProjectOutputs.map" -Wl,--gc-sections -static -L"/Users/chefluke/STM32Cube/ECSE444/FinalProjectOutputs/lib" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -u _printf_float -u _scanf_float -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 
