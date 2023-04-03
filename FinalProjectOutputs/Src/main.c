@@ -97,6 +97,13 @@ uint16_t dotArray[44];
 int dashArraySize = 44;
 uint16_t dashArray[44];
 
+
+char letterToPrint;
+
+char space[1];
+
+char notSpace; // 1 is true
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -120,6 +127,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) { // page 391 HAL driver manual
 		mode = (mode+1)%2;
 		if (mode == 1) {
 			printf("Taking input Morse input (array), displaying letter to terminal. \n\r");
+			printf("Press one more letter to end current translation. \n\r");
 		} else {
 			printf("Taking letter input from terminal, outputting Morse. \n\r");
 		}
@@ -271,33 +279,125 @@ void playMorseToSpeaker(char *morseArray, int morseArraySize) {
 
 char getLetterFromMorse(char *morseArray, int morseArraySize) {
 	char nullChar = '\0';
-	switch (morseArraySize)
-	{
-		case 1: // single char Morse Codes
-			; // weird c thing  but we technically need this semicolon
-			char morse1 = morseArray[0];
-
-			switch (morse1) {
+	if (morseArraySize == 0) {return nullChar;}
+	switch (morseArray[0]) {
+	case '.':
+		if (morseArraySize == 1) {return 'E';}
+		switch (morseArray[1]) {
+		case '.':
+			if (morseArraySize == 2) {return 'I';}
+			switch (morseArray[2]) {
 			case '.':
-				return 'E';
+				if (morseArraySize == 3) {return 'S';}
+				switch(morseArray[3]) {
+				case '.':
+					return 'H';
+				case '-':
+					return 'V';
+				}
 			case '-':
-				return 'T';
-			default:
-				return nullChar;
+				if (morseArraySize == 3) {return 'U';}
+				switch(morseArray[3]) {
+				case '.':
+					return 'F';
+				case '-':
+					;
+				}
 			}
-
-		case 2: // double char Morse Codes
-
-
-		case 3: // triple char Morse Codes
-
-
-		case 4: // quad char Morse Codes
-
-
-		default:
-			return nullChar;
+		case '-':
+			if (morseArraySize == 2) {return 'A';}
+			switch (morseArray[2]) {
+			case '.':
+				if (morseArraySize == 3) {return 'R';}
+				switch(morseArray[3]) {
+				case '.':
+					return 'L';
+				case '-':
+					;
+				}
+			case '-':
+				if (morseArraySize == 3) {return 'W';}
+				switch(morseArray[3]) {
+				case '.':
+					return 'P';
+				case '-':
+					return 'J';
+				}
+			}
+		}
+	case '-':
+		if (morseArraySize == 1) {return 'T';}
+		switch (morseArray[1]) {
+		case '.':
+			if (morseArraySize == 2) {return 'N';}
+			switch (morseArray[2]) {
+			case '.':
+				if (morseArraySize == 3) {return 'D';}
+				switch(morseArray[3]) {
+				case '.':
+					return 'B';
+				case '-':
+					return 'X';
+				}
+			case '-':
+				if (morseArraySize == 3) {return 'K';}
+				switch(morseArray[3]) {
+				case '.':
+					return 'C';
+				case '-':
+					return 'Y';
+				}
+			}
+		case '-':
+			if (morseArraySize == 2) {return 'M';}
+			switch (morseArray[2]) {
+			case '.':
+				if (morseArraySize == 3) {return 'G';}
+				switch(morseArray[3]) {
+				case '.':
+					return 'Z';
+				case '-':
+					return 'Q';
+				}
+			case '-':
+				if (morseArraySize == 3) {return 'O';}
+				switch(morseArray[3]) {
+				case '.':
+					;
+				case '-':
+					;
+				}
+			}
+		}
 	}
+
+	return nullChar;
+//	switch (morseArraySize)
+//	{
+//		case 1: // single char Morse Codes
+//			; // weird c thing  but we technically need this semicolon
+//			char morse1 = morseArray[0];
+//
+//			switch (morse1) {
+//			case '.':
+//				return 'E';
+//			case '-':
+//				return 'T';
+//			default:
+//				return nullChar;
+//			}
+//		case 2: // double char Morse Codes
+//			;
+//
+//		case 3: // triple char Morse Codes
+//
+//
+//		case 4: // quad char Morse Codes
+//
+//
+//		default:
+//			return nullChar;
+//	}
 }
 
 /* USER CODE END 0 */
@@ -316,14 +416,18 @@ int main(void)
 mode = 0;
 
 
-morseInputArray[0] = '.';
+morseInputArray[0] = '\0';
 morseInputArray[1] = '\0';
 morseInputArray[2] = '\0';
 morseInputArray[3] = '\0';
-morseInputArraySize = 1;
-char letterToPrint;
+morseInputArraySize = 0;
 
 
+letterToPrint;
+
+space[0] = " ";
+
+notSpace = 1; // 1 is true
 
 
 
@@ -393,11 +497,26 @@ char letterToPrint;
 	  }
 
 	  if (mode == 1) { // taking input of array for Morse letter, displaying letter to terminal
+		  notSpace = 1;
+		  morseInputArraySize = 0;
+		  morseInputArray[0] = '\0'; morseInputArray[1] = '\0'; morseInputArray[2] = '\0'; morseInputArray[3] = '\0';
+		  printf("\n\rInput Morse (. and - with a space at the end)\n\r");
 
+		  while (notSpace == 1) {
+			  scanf("%c", &inputChar);
+			  if (inputChar == 32) {
+				  printf("\n\rSpace Inputed\n\r");
+				  notSpace = 0;
+				  break;
+			  }
+			  printf("You entered: %c\n\r", inputChar);
+			  morseInputArray[morseInputArraySize] = inputChar;
+			  morseInputArraySize = morseInputArraySize+1;
+		  }
 		  letterToPrint = getLetterFromMorse(morseInputArray, morseInputArraySize);
 
-		  printf("Letter from  array: %c \n\r", letterToPrint);
-		  HAL_Delay(5000);
+		  printf("Letter from  input: %c \n\r", letterToPrint);
+		  HAL_Delay(500);
 	  }
 
 
