@@ -87,21 +87,17 @@ int morseLetterSize;
 char morseLetter[4];
 char mode;
 
+
 // for mode 1
 char morseInputArray[4] = {'.', '\0', '\0', '\0'};
 int morseInputArraySize = 1;
 
-// for speaker
-int dotArraySize = 44;
-uint16_t dotArray[44];
-int dashArraySize = 44;
-uint16_t dashArray[44];
+	// for speaker
+int beepArraySize = 44;
+uint16_t beepArray[44];
 
 
 char letterToPrint;
-
-char space[1];
-
 char notSpace; // 1 is true
 
 /* USER CODE END PV */
@@ -130,13 +126,17 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) { // page 391 HAL driver manual
 			printf("Press one more letter to end current translation. \n\r");
 		} else {
 			printf("Taking letter input from terminal, outputting Morse. \n\r");
+			printf("Press the spacebar to end current translation. \n\r");
 		}
 	}
 }
 
+/**
+ * Update global variables for the Morse array based on the inputted letter
+ */
 void updateMorseLetter(char letter){
 
-	// \0 for space
+	// \0s for space
 	morseLetterSize = 4;
 	morseLetter[0] = '\0'; morseLetter[1] = '\0'; morseLetter[2] = '\0'; morseLetter[3] = '\0';
 	switch (letter)
@@ -247,6 +247,9 @@ void updateMorseLetter(char letter){
 	}
 }
 
+/**
+ * print the current Morse array to the serial terminal
+ */
 void printMorseLetter() {
 	if (morseLetter[0] == '\0') {
 		printf(" *space* ");
@@ -257,26 +260,35 @@ void printMorseLetter() {
 	}
 }
 
+/**
+ * Play the current Morse array to the DAC speaker (and display on LED)
+ */
 void playMorseToSpeaker(char *morseArray, int morseArraySize) {
 	for (int i = 0; i < morseArraySize; i++) {
 		if (morseArray[i] == '.') {
-			HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t*) *dotArray, (uint32_t) dotArraySize, DAC_ALIGN_12B_R);
+			HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t*) *beepArray, (uint32_t) beepArraySize, DAC_ALIGN_12B_R);
+			HAL_GPIO_TogglePin(led2_GPIO_Port, led2_Pin);
 			HAL_Delay(300);
 			HAL_DAC_Stop_DMA(&hdac1, DAC_CHANNEL_1);
+			HAL_GPIO_TogglePin(led2_GPIO_Port, led2_Pin);
 			HAL_Delay(300);
 		} else if (morseArray[i] == '-') {
-			HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t*) *dashArray, (uint32_t) dashArraySize, DAC_ALIGN_12B_R);
+			HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t*) *beepArray, (uint32_t) beepArraySize, DAC_ALIGN_12B_R);
+			HAL_GPIO_TogglePin(led2_GPIO_Port, led2_Pin);
 			HAL_Delay(600);
 			HAL_DAC_Stop_DMA(&hdac1, DAC_CHANNEL_1);
+			HAL_GPIO_TogglePin(led2_GPIO_Port, led2_Pin);
 			HAL_Delay(300);
 		} else {
 			return;
 		}
-		printf("\n\r");
 	}
-
+	printf("\n\r");
 }
 
+/**
+ * Get a letter from the inputted Morse array
+ */
 char getLetterFromMorse(char *morseArray, int morseArraySize) {
 	char nullChar = '\0';
 	if (morseArraySize == 0) {return nullChar;}
@@ -370,34 +382,7 @@ char getLetterFromMorse(char *morseArray, int morseArraySize) {
 			}
 		}
 	}
-
 	return nullChar;
-//	switch (morseArraySize)
-//	{
-//		case 1: // single char Morse Codes
-//			; // weird c thing  but we technically need this semicolon
-//			char morse1 = morseArray[0];
-//
-//			switch (morse1) {
-//			case '.':
-//				return 'E';
-//			case '-':
-//				return 'T';
-//			default:
-//				return nullChar;
-//			}
-//		case 2: // double char Morse Codes
-//			;
-//
-//		case 3: // triple char Morse Codes
-//
-//
-//		case 4: // quad char Morse Codes
-//
-//
-//		default:
-//			return nullChar;
-//	}
 }
 
 /* USER CODE END 0 */
@@ -422,10 +407,6 @@ morseInputArray[2] = '\0';
 morseInputArray[3] = '\0';
 morseInputArraySize = 0;
 
-
-letterToPrint;
-
-space[0] = " ";
 
 notSpace = 1; // 1 is true
 
@@ -467,12 +448,10 @@ notSpace = 1; // 1 is true
   /*
    * Initialize beeps
    */
-  for (int i = 0; i < dotArraySize; i++) {
-	  dotArray[i] = (arm_sin_f32(2*PI*i/dotArraySize)+1)*(1365); // 1365 multiplier as 4095 max output, max sine output of 2, scale down to 2/3 to reduce distortion (4095/2)*(2/3)
+  for (int i = 0; i < beepArraySize; i++) {
+	  beepArray[i] = (arm_sin_f32(2*PI*i/beepArraySize)+1)*(1365); // 1365 multiplier as 4095 max output, max sine output of 2, scale down to 2/3 to reduce distortion (4095/2)*(2/3)
   }
-  for (int i = 0; i < dashArraySize; i++) {
-  	  dashArray[i] = (arm_sin_f32(2*PI*i/dashArraySize)+1)*(1365); // 1365 multiplier as 4095 max output, max sine output of 2, scale down to 2/3 to reduce distortion (4095/2)*(2/3)
-    }
+
 
   /* USER CODE END 2 */
 
@@ -481,27 +460,29 @@ notSpace = 1; // 1 is true
   while (1)
   {
 	  if (mode == 0) { // taking input from terminal, outputting Morse code
+		  // get character from user
 		  printf("Input a character: ");
 		  scanf("%c", &inputChar);
 		  printf("\n\rYou entered: %c \n\r", inputChar); // print character
-		  //printf("ASCII Character: %d \n\r", inputChar); // print ASCII character
+		  //printf("ASCII Character: %d \n\r", inputChar); // print ASCII value
 
+		  // Update, display, and play the Morse letter
 		  updateMorseLetter(inputChar);
 		  printf("Morse Translation: ");
 		  printMorseLetter();
 		  printf("\n\r");
-
 		  playMorseToSpeaker(morseLetter, morseLetterSize);
 		  HAL_Delay(1000);
 
 	  }
 
 	  if (mode == 1) { // taking input of array for Morse letter, displaying letter to terminal
+		  // reset input stuff
 		  notSpace = 1;
 		  morseInputArraySize = 0;
 		  morseInputArray[0] = '\0'; morseInputArray[1] = '\0'; morseInputArray[2] = '\0'; morseInputArray[3] = '\0';
+		  // get user input until space input
 		  printf("\n\rInput Morse (. and - with a space at the end)\n\r");
-
 		  while (notSpace == 1) {
 			  scanf("%c", &inputChar);
 			  if (inputChar == 32) {
@@ -509,12 +490,12 @@ notSpace = 1; // 1 is true
 				  notSpace = 0;
 				  break;
 			  }
-			  printf("You entered: %c\n\r", inputChar);
+			  printf(" You entered: %c\n\r", inputChar);
 			  morseInputArray[morseInputArraySize] = inputChar;
 			  morseInputArraySize = morseInputArraySize+1;
 		  }
+		  // display letter corresponding to input
 		  letterToPrint = getLetterFromMorse(morseInputArray, morseInputArraySize);
-
 		  printf("Letter from  input: %c \n\r", letterToPrint);
 		  HAL_Delay(500);
 	  }
