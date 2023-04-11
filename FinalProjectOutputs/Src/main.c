@@ -25,6 +25,7 @@
 #include <string.h>
 #define ARM_MATH_CM4
 #include "arm_math.h"
+#include <stm32l4s5i_iot01_gyro.h>
 
 /* USER CODE END Includes */
 
@@ -499,6 +500,7 @@ int main(void)
 	 * mode 1 for taking input of array for Morse letter, displaying letter to terminal
 	 */
 mode = 0;
+char ADC = 0;
 
 
 morseInputArray[0] = '\0';
@@ -579,32 +581,40 @@ notSpace = 1; // 1 is true
 	  }
 
 	  if (mode == 1) { // taking input of array for Morse letter, displaying letter to terminal
-//		  // reset input stuff
-//		  notSpace = 1;
-//		  morseInputArraySize = 0;
-//		  morseInputArray[0] = '\0'; morseInputArray[1] = '\0'; morseInputArray[2] = '\0'; morseInputArray[3] = '\0';
-//		  // get user input until space input
-//		  printf("\n\rInput Morse (. and - with a space at the end)\n\r");
-//		  while (notSpace == 1) {
-//			  scanf("%c", &inputChar);
-//			  if (inputChar == 32) {
-//				  printf("\n\rSpace Inputed\n\r");
-//				  notSpace = 0;
-//				  break;
-//			  }
-//			  printf(" You entered: %c\n\r", inputChar);
-//			  morseInputArray[morseInputArraySize] = inputChar;
-//			  morseInputArraySize = morseInputArraySize+1;
-//		  }
-		  // get morse input from ADC
-		  printf("\n\rInput Morse using the analog stick (wait 2 seconds when done)\n\r");
-		  morseInputArraySize = getMorseInput();
-		  printf("\n\rYou entered: %c%c%c%c%c\n\r", code[0], code[1], code[2], code[3], code[4]);
+		  if (ADC == 0) {
+		  	  // reset input stuff
+			  notSpace = 1;
+			  morseInputArraySize = 0;
+			  morseInputArray[0] = '\0'; morseInputArray[1] = '\0'; morseInputArray[2] = '\0'; morseInputArray[3] = '\0';
+			  // get user input until space input
+			  printf("\n\rInput Morse (. and - with a space at the end)\n\r");
+			  while (notSpace == 1) {
+				  scanf("%c", &inputChar);
+				  if (inputChar == 32) {
+					  printf("\n\rSpace Inputed\n\r");
+					  notSpace = 0;
+					  break;
+				  }
+				  printf(" You entered: %c\n\r", inputChar);
+				  morseInputArray[morseInputArraySize] = inputChar;
+				  morseInputArraySize = morseInputArraySize+1;
+			  }
+			  // get morse input from ADC
+			  letterToPrint = getLetterFromMorse(morseInputArray, morseInputArraySize);
+			  printf("Letter from  input: %c \n\r", letterToPrint);
+			  HAL_Delay(500);
 
-		  // display letter corresponding to input
-		  letterToPrint = getLetterFromMorse(code, morseInputArraySize);
-		  printf("Letter from  input: %c \n\r", letterToPrint);
-		  HAL_Delay(500);
+		  }
+		  if (ADC == 1)  {
+			  printf("\n\rInput Morse using the analog stick (wait 2 seconds when done)\n\r");
+			  morseInputArraySize = getMorseInput();
+			  printf("\n\rYou entered: %c%c%c%c%c\n\r", code[0], code[1], code[2], code[3], code[4]);
+
+			  // display letter corresponding to input
+			  letterToPrint = getLetterFromMorse(code, morseInputArraySize);
+			  printf("Letter from  input: %c \n\r", letterToPrint);
+			  HAL_Delay(500);
+		  }
 	  }
 
 

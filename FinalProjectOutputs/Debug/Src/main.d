@@ -18,6 +18,9 @@ Src/main.o: ../Src/main.c ../Inc/main.h \
  ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_dma.h \
  ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_dma_ex.h \
  ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_cortex.h \
+ ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_adc.h \
+ ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_ll_adc.h \
+ ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_adc_ex.h \
  ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_dac.h \
  ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_dac_ex.h \
  ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_exti.h \
@@ -32,7 +35,12 @@ Src/main.o: ../Src/main.c ../Inc/main.h \
  ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_tim_ex.h \
  ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_uart.h \
  ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_uart_ex.h \
- ../Inc/arm_math.h ../Drivers/CMSIS/Include/cmsis_compiler.h
+ ../Inc/arm_math.h ../Drivers/CMSIS/Include/cmsis_compiler.h \
+ /Users/chefluke/STM32Cube/ECSE444/FinalProjectOutputs/Drivers/BSP/B-L4S5I-IOT01/stm32l4s5i_iot01_gyro.h \
+ /Users/chefluke/STM32Cube/ECSE444/FinalProjectOutputs/Drivers/BSP/B-L4S5I-IOT01/stm32l4s5i_iot01.h \
+ /Users/chefluke/STM32Cube/ECSE444/FinalProjectOutputs/Drivers/BSP/B-L4S5I-IOT01/../Components/lsm6dsl/lsm6dsl.h \
+ /Users/chefluke/STM32Cube/ECSE444/FinalProjectOutputs/Drivers/BSP/B-L4S5I-IOT01/../Components/lsm6dsl/../Common/accelero.h \
+ /Users/chefluke/STM32Cube/ECSE444/FinalProjectOutputs/Drivers/BSP/B-L4S5I-IOT01/../Components/lsm6dsl/../Common/gyro.h
 ../Inc/main.h:
 ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal.h:
 ../Inc/stm32l4xx_hal_conf.h:
@@ -53,6 +61,9 @@ Src/main.o: ../Src/main.c ../Inc/main.h \
 ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_dma.h:
 ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_dma_ex.h:
 ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_cortex.h:
+../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_adc.h:
+../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_ll_adc.h:
+../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_adc_ex.h:
 ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_dac.h:
 ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_dac_ex.h:
 ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_exti.h:
@@ -69,3 +80,8 @@ Src/main.o: ../Src/main.c ../Inc/main.h \
 ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_uart_ex.h:
 ../Inc/arm_math.h:
 ../Drivers/CMSIS/Include/cmsis_compiler.h:
+/Users/chefluke/STM32Cube/ECSE444/FinalProjectOutputs/Drivers/BSP/B-L4S5I-IOT01/stm32l4s5i_iot01_gyro.h:
+/Users/chefluke/STM32Cube/ECSE444/FinalProjectOutputs/Drivers/BSP/B-L4S5I-IOT01/stm32l4s5i_iot01.h:
+/Users/chefluke/STM32Cube/ECSE444/FinalProjectOutputs/Drivers/BSP/B-L4S5I-IOT01/../Components/lsm6dsl/lsm6dsl.h:
+/Users/chefluke/STM32Cube/ECSE444/FinalProjectOutputs/Drivers/BSP/B-L4S5I-IOT01/../Components/lsm6dsl/../Common/accelero.h:
+/Users/chefluke/STM32Cube/ECSE444/FinalProjectOutputs/Drivers/BSP/B-L4S5I-IOT01/../Components/lsm6dsl/../Common/gyro.h:
