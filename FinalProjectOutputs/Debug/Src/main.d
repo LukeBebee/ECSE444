@@ -35,23 +35,23 @@ Src/main.o: ../Src/main.c ../Inc/main.h \
  ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_tim_ex.h \
  ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_uart.h \
  ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_uart_ex.h \
- ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h \
- ../Middlewares/Third_Party/FreeRTOS/Source/include/FreeRTOS.h \
+ /Users/chefluke/STM32Cube/ECSE444/Lab4v2/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h \
+ /Users/chefluke/STM32Cube/ECSE444/Lab4v2/Middlewares/Third_Party/FreeRTOS/Source/include/FreeRTOS.h \
  ../Inc/FreeRTOSConfig.h \
- ../Middlewares/Third_Party/FreeRTOS/Source/include/projdefs.h \
- ../Middlewares/Third_Party/FreeRTOS/Source/include/portable.h \
- ../Middlewares/Third_Party/FreeRTOS/Source/include/deprecated_definitions.h \
- ../Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F/portmacro.h \
- ../Middlewares/Third_Party/FreeRTOS/Source/include/mpu_wrappers.h \
- ../Middlewares/Third_Party/FreeRTOS/Source/include/task.h \
- ../Middlewares/Third_Party/FreeRTOS/Source/include/list.h \
- ../Middlewares/Third_Party/FreeRTOS/Source/include/timers.h \
- ../Middlewares/Third_Party/FreeRTOS/Source/include/task.h \
- ../Middlewares/Third_Party/FreeRTOS/Source/include/queue.h \
- ../Middlewares/Third_Party/FreeRTOS/Source/include/semphr.h \
- ../Middlewares/Third_Party/FreeRTOS/Source/include/queue.h \
- ../Middlewares/Third_Party/FreeRTOS/Source/include/event_groups.h \
- ../Middlewares/Third_Party/FreeRTOS/Source/include/timers.h \
+ /Users/chefluke/STM32Cube/ECSE444/Lab4v2/Middlewares/Third_Party/FreeRTOS/Source/include/projdefs.h \
+ /Users/chefluke/STM32Cube/ECSE444/Lab4v2/Middlewares/Third_Party/FreeRTOS/Source/include/portable.h \
+ /Users/chefluke/STM32Cube/ECSE444/Lab4v2/Middlewares/Third_Party/FreeRTOS/Source/include/deprecated_definitions.h \
+ /Users/chefluke/STM32Cube/ECSE444/Lab4v2/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F/portmacro.h \
+ /Users/chefluke/STM32Cube/ECSE444/Lab4v2/Middlewares/Third_Party/FreeRTOS/Source/include/mpu_wrappers.h \
+ /Users/chefluke/STM32Cube/ECSE444/Lab4v2/Middlewares/Third_Party/FreeRTOS/Source/include/task.h \
+ /Users/chefluke/STM32Cube/ECSE444/Lab4v2/Middlewares/Third_Party/FreeRTOS/Source/include/list.h \
+ /Users/chefluke/STM32Cube/ECSE444/Lab4v2/Middlewares/Third_Party/FreeRTOS/Source/include/timers.h \
+ /Users/chefluke/STM32Cube/ECSE444/Lab4v2/Middlewares/Third_Party/FreeRTOS/Source/include/task.h \
+ /Users/chefluke/STM32Cube/ECSE444/Lab4v2/Middlewares/Third_Party/FreeRTOS/Source/include/queue.h \
+ /Users/chefluke/STM32Cube/ECSE444/Lab4v2/Middlewares/Third_Party/FreeRTOS/Source/include/semphr.h \
+ /Users/chefluke/STM32Cube/ECSE444/Lab4v2/Middlewares/Third_Party/FreeRTOS/Source/include/queue.h \
+ /Users/chefluke/STM32Cube/ECSE444/Lab4v2/Middlewares/Third_Party/FreeRTOS/Source/include/event_groups.h \
+ /Users/chefluke/STM32Cube/ECSE444/Lab4v2/Middlewares/Third_Party/FreeRTOS/Source/include/timers.h \
  ../Inc/arm_math.h ../Drivers/CMSIS/Include/cmsis_compiler.h
 ../Inc/main.h:
 ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal.h:
@@ -90,22 +90,22 @@ Src/main.o: ../Src/main.c ../Inc/main.h \
 ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_tim_ex.h:
 ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_uart.h:
 ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_uart_ex.h:
-../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h:
-../Middlewares/Third_Party/FreeRTOS/Source/include/FreeRTOS.h:
+/Users/chefluke/STM32Cube/ECSE444/Lab4v2/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h:
+/Users/chefluke/STM32Cube/ECSE444/Lab4v2/Middlewares/Third_Party/FreeRTOS/Source/include/FreeRTOS.h:
 ../Inc/FreeRTOSConfig.h:
-../Middlewares/Third_Party/FreeRTOS/Source/include/projdefs.h:
-../Middlewares/Third_Party/FreeRTOS/Source/include/portable.h:
-../Middlewares/Third_Party/FreeRTOS/Source/include/deprecated_definitions.h:
-../Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F/portmacro.h:
-../Middlewares/Third_Party/FreeRTOS/Source/include/mpu_wrappers.h:
-../Middlewares/Third_Party/FreeRTOS/Source/include/task.h:
-../Middlewares/Third_Party/FreeRTOS/Source/include/list.h:
-../Middlewares/Third_Party/FreeRTOS/Source/include/timers.h:
-../Middlewares/Third_Party/FreeRTOS/Source/include/task.h:
-../Middlewares/Third_Party/FreeRTOS/Source/include/queue.h:
-../Middlewares/Third_Party/FreeRTOS/Source/include/semphr.h:
-../Middlewares/Third_Party/FreeRTOS/Source/include/queue.h:
-../Middlewares/Third_Party/FreeRTOS/Source/include/event_groups.h:
-../Middlewares/Third_Party/FreeRTOS/Source/include/timers.h:
+/Users/chefluke/STM32Cube/ECSE444/Lab4v2/Middlewares/Third_Party/FreeRTOS/Source/include/projdefs.h:
+/Users/chefluke/STM32Cube/ECSE444/Lab4v2/Middlewares/Third_Party/FreeRTOS/Source/include/portable.h:
+/Users/chefluke/STM32Cube/ECSE444/Lab4v2/Middlewares/Third_Party/FreeRTOS/Source/include/deprecated_definitions.h:
+/Users/chefluke/STM32Cube/ECSE444/Lab4v2/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F/portmacro.h:
+/Users/chefluke/STM32Cube/ECSE444/Lab4v2/Middlewares/Third_Party/FreeRTOS/Source/include/mpu_wrappers.h:
+/Users/chefluke/STM32Cube/ECSE444/Lab4v2/Middlewares/Third_Party/FreeRTOS/Source/include/task.h:
+/Users/chefluke/STM32Cube/ECSE444/Lab4v2/Middlewares/Third_Party/FreeRTOS/Source/include/list.h:
+/Users/chefluke/STM32Cube/ECSE444/Lab4v2/Middlewares/Third_Party/FreeRTOS/Source/include/timers.h:
+/Users/chefluke/STM32Cube/ECSE444/Lab4v2/Middlewares/Third_Party/FreeRTOS/Source/include/task.h:
+/Users/chefluke/STM32Cube/ECSE444/Lab4v2/Middlewares/Third_Party/FreeRTOS/Source/include/queue.h:
+/Users/chefluke/STM32Cube/ECSE444/Lab4v2/Middlewares/Third_Party/FreeRTOS/Source/include/semphr.h:
+/Users/chefluke/STM32Cube/ECSE444/Lab4v2/Middlewares/Third_Party/FreeRTOS/Source/include/queue.h:
+/Users/chefluke/STM32Cube/ECSE444/Lab4v2/Middlewares/Third_Party/FreeRTOS/Source/include/event_groups.h:
+/Users/chefluke/STM32Cube/ECSE444/Lab4v2/Middlewares/Third_Party/FreeRTOS/Source/include/timers.h:
 ../Inc/arm_math.h:
 ../Drivers/CMSIS/Include/cmsis_compiler.h:

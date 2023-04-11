@@ -114,8 +114,6 @@ char notSpace; // 1 is true
 
 
 
-//sprintf
-char buffer[50];
 
 /* USER CODE END PV */
 
@@ -138,21 +136,21 @@ void StartMorseToLetter(void const * argument);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) { // page 391 HAL driver manual
-	sprintf(buffer, "Interrupt \n\r");
+	printf("Interrupt \n\r");
 	if (GPIO_Pin == userButton_Pin) { // verify that only the pin we want is starting this interrupt (good coding practice)
-		sprintf(buffer, "Button Pressed. \n\r");
+		printf("Button Pressed. \n\r");
 		HAL_GPIO_TogglePin(led1_GPIO_Port, led1_Pin);
 		mode = (mode+1)%2;
 		if (mode == 1) {
-			sprintf(buffer, "Taking input Morse input (array), displaying letter to terminal. \n\r");
-			HAL_UART_Transmit(&huart1, buffer, sizeof(buffer), 10);
-			sprintf(buffer, "Press one more letter to end current translation. \n\r");
-			HAL_UART_Transmit(&huart1, buffer, sizeof(buffer), 10);
+			printf("Taking input Morse input (array), displaying letter to terminal. \n\r");
+
+			printf("Press one more letter to end current translation. \n\r");
+
 		} else {
-			sprintf(buffer, "Taking letter input from terminal, outputting Morse. \n\r");
-			HAL_UART_Transmit(&huart1, buffer, sizeof(buffer), 10);
-			sprintf(buffer, "Press the spacebar to end current translation. \n\r");
-			HAL_UART_Transmit(&huart1, buffer, sizeof(buffer), 10);
+			printf("Taking letter input from terminal, outputting Morse. \n\r");
+
+			printf("Press the spacebar to end current translation. \n\r");
+
 		}
 	}
 }
@@ -283,12 +281,12 @@ void updateMorseLetter(char letter){
  */
 void printMorseLetter() {
 	if (morseLetter[0] == '\0') {
-		sprintf(buffer, " *space* ");
-		HAL_UART_Transmit(&huart1, buffer, sizeof(buffer), 10);
+		printf(" *space* ");
+
 	} else {
 		for (int i = 0; i < morseLetterSize; i++){
-			sprintf(buffer, "%c", morseLetter[i]);
-			HAL_UART_Transmit(&huart1, buffer, sizeof(buffer), 10);
+			printf("%c", morseLetter[i]);
+
 		}
 	}
 }
@@ -316,8 +314,8 @@ void playMorseToSpeaker(char *morseArray, int morseArraySize) {
 			return;
 		}
 	}
-	sprintf(buffer, "\n\r");
-	HAL_UART_Transmit(&huart1, buffer, sizeof(buffer), 10);
+	printf("\n\r");
+
 }
 
 /**
@@ -498,6 +496,7 @@ int getMorseInput() {
 		HAL_Delay(10);
 		delays[i] = millis - start;
 	}
+	return -1; // error
 }
 
 /* USER CODE END 0 */
@@ -569,10 +568,10 @@ notSpace = 1; // 1 is true
 	  beepArray[i] = (arm_sin_f32(2*PI*i/beepArraySize)+1)*(1365); // 1365 multiplier as 4095 max output, max sine output of 2, scale down to 2/3 to reduce distortion (4095/2)*(2/3)
   }
 
-  sprintf(buffer, "Welcome to the Morse code translator!\n\r");
-  HAL_UART_Transmit(&huart1, buffer, sizeof(buffer), 10);
-  sprintf(buffer, "Operating system starting now.\n\r");
-  HAL_UART_Transmit(&huart1, buffer, sizeof(buffer), 10);
+  printf("Welcome to the Morse code translator!\n\r");
+
+  printf("Operating system starting now.\n\r");
+
 
   /* USER CODE END 2 */
 
@@ -615,16 +614,16 @@ notSpace = 1; // 1 is true
   {
 //	  if (mode == 0) { // taking input from terminal, outputting Morse code
 //		  // get character from user
-//		  sprintf(buffer, "Input a character: ");
-//		  sscanf(buffer, "%c", &inputChar);
-//		  sprintf(buffer, "\n\rYou entered: %c \n\r", inputChar); // print character
-//		  //sprintf(buffer, "ASCII Character: %d \n\r", inputChar); // print ASCII value
+//		  printf("Input a character: ");
+//		  scanf("%c", &inputChar);
+//		  printf("\n\rYou entered: %c \n\r", inputChar); // print character
+//		  //printf("ASCII Character: %d \n\r", inputChar); // print ASCII value
 //
 //		  // Update, display, and play the Morse letter
 //		  updateMorseLetter(inputChar);
-//		  sprintf(buffer, "Morse Translation: ");
+//		  printf("Morse Translation: ");
 //		  printMorseLetter();
-//		  sprintf(buffer, "\n\r");
+//		  printf("\n\r");
 //		  playMorseToSpeaker(morseLetter, morseLetterSize);
 //		  HAL_Delay(1000);
 //
@@ -636,31 +635,31 @@ notSpace = 1; // 1 is true
 ////		  morseInputArraySize = 0;
 ////		  morseInputArray[0] = '\0'; morseInputArray[1] = '\0'; morseInputArray[2] = '\0'; morseInputArray[3] = '\0';
 ////		  // get user input until space input
-////		  sprintf(buffer, "\n\rInput Morse (. and - with a space at the end)\n\r");
+////		  printf("\n\rInput Morse (. and - with a space at the end)\n\r");
 ////		  while (notSpace == 1) {
-////			  sscanf(buffer, "%c", &inputChar);
+////			  scanf("%c", &inputChar);
 ////			  if (inputChar == 32) {
-////				  sprintf(buffer, "\n\rSpace Inputed\n\r");
+////				  printf("\n\rSpace Inputed\n\r");
 ////				  notSpace = 0;
 ////				  break;
 ////			  }
-////			  sprintf(buffer, " You entered: %c\n\r", inputChar);
+////			  printf(" You entered: %c\n\r", inputChar);
 ////			  morseInputArray[morseInputArraySize] = inputChar;
 ////			  morseInputArraySize = morseInputArraySize+1;
 ////		  }
 //		  // get morse input from ADC
-//		  sprintf(buffer, "\n\rInput Morse using the analog stick (wait 2 seconds when done)\n\r");
+//		  printf("\n\rInput Morse using the analog stick (wait 2 seconds when done)\n\r");
 //		  morseInputArraySize = getMorseInput();
-//		  sprintf(buffer, "\n\rYou entered: %c%c%c%c%c\n\r", code[0], code[1], code[2], code[3], code[4]);
+//		  printf("\n\rYou entered: %c%c%c%c%c\n\r", code[0], code[1], code[2], code[3], code[4]);
 //
 //		  // display letter corresponding to input
 //		  letterToPrint = getLetterFromMorse(code, morseInputArraySize);
-//		  sprintf(buffer, "Letter from  input: %c \n\r", letterToPrint);
+//		  printf("Letter from  input: %c \n\r", letterToPrint);
 //		  HAL_Delay(500);
 //	  }
 
-	  sprintf(buffer, "Not in OS\n\r");
-	  HAL_UART_Transmit(&huart1, buffer, sizeof(buffer), 10);
+	  printf("Not in OS\n\r");
+
 
     /* USER CODE END WHILE */
 
@@ -1043,20 +1042,20 @@ void StartLetterToMorse(void const * argument)
     osDelay(1);
 
     // get character from user
-    sprintf(buffer, "Input a character: ");
-    HAL_UART_Transmit(&huart1, buffer, sizeof(buffer), 10);
-    sscanf(buffer, "%c", &inputChar);
-    sprintf(buffer, "\n\rYou entered: %c \n\r", inputChar); // print character
-    HAL_UART_Transmit(&huart1, buffer, sizeof(buffer), 10);
-    //sprintf(buffer, "ASCII Character: %d \n\r", inputChar); // print ASCII value
+    printf("Input a character: ");
+
+    scanf("%c", &inputChar);
+    printf("\n\rYou entered: %c \n\r", inputChar); // print character
+
+    //printf("ASCII Character: %d \n\r", inputChar); // print ASCII value
 
     // Update, display, and play the Morse letter
     updateMorseLetter(inputChar);
-    sprintf(buffer, "Morse Translation: ");
-    HAL_UART_Transmit(&huart1, buffer, sizeof(buffer), 10);
+    printf("Morse Translation: ");
+
     printMorseLetter();
-    sprintf(buffer, "\n\r");
-    HAL_UART_Transmit(&huart1, buffer, sizeof(buffer), 10);
+    printf("\n\r");
+
     playMorseToSpeaker(morseLetter, morseLetterSize);
     osDelay(1000);
   }
@@ -1083,24 +1082,24 @@ void StartMorseToLetter(void const * argument)
     morseInputArraySize = 0;
     morseInputArray[0] = '\0'; morseInputArray[1] = '\0'; morseInputArray[2] = '\0'; morseInputArray[3] = '\0';
     // get user input until space input
-    sprintf(buffer, "\n\rInput Morse (. and - with a space at the end)\n\r");
-    HAL_UART_Transmit(&huart1, buffer, sizeof(buffer), 10);
+    printf("\n\rInput Morse (. and - with a space at the end)\n\r");
+
     while (notSpace == 1) {
-   	  	sscanf(buffer, "%c", &inputChar);
+   	  	scanf("%c", &inputChar);
    	  	if (inputChar == 32) {
-   		  	sprintf(buffer, "\n\rSpace Inputed\n\r");
-   		 HAL_UART_Transmit(&huart1, buffer, sizeof(buffer), 10);
+   		  	printf("\n\rSpace Inputed\n\r");
+
    		  	notSpace = 0;
    		  	break;
    	  	}
-   	  	sprintf(buffer, " You entered: %c\n\r", inputChar);
-   	  	HAL_UART_Transmit(&huart1, buffer, sizeof(buffer), 10);
+   	  	printf(" You entered: %c\n\r", inputChar);
+
    	  	morseInputArray[morseInputArraySize] = inputChar;
    	  	morseInputArraySize = morseInputArraySize+1;
    	  	// print letter
    	  	letterToPrint = getLetterFromMorse(morseInputArray, morseInputArraySize);
-   	 	sprintf(buffer, "Letter from  input: %c \n\r", letterToPrint);
-   	 	HAL_UART_Transmit(&huart1, buffer, sizeof(buffer), 10);
+   	 	printf("Letter from  input: %c \n\r", letterToPrint);
+
    	 	osDelay(500);
     }
   }
@@ -1139,8 +1138,7 @@ void Error_Handler(void)
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
   __disable_irq();
-  sprintf(buffer, "Error\n\r");
-  HAL_UART_Transmit(&huart1, buffer, sizeof(buffer), 10);
+  printf("Error\n\r");
   while (1)
   {
   }
@@ -1159,7 +1157,7 @@ void assert_failed(uint8_t *file, uint32_t line)
 {
   /* USER CODE BEGIN 6 */
   /* User can add his own implementation to report the file name and line number,
-     ex: sprintf(buffer, "Wrong parameters value: file %s on line %d\r\n", file, line) */
+     ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */
