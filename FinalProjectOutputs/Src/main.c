@@ -43,10 +43,13 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+ADC_HandleTypeDef hadc1;
+
 DAC_HandleTypeDef hdac1;
 DMA_HandleTypeDef hdma_dac1_ch1;
 
 TIM_HandleTypeDef htim2;
+TIM_HandleTypeDef htim5;
 
 UART_HandleTypeDef huart1;
 
@@ -91,6 +94,11 @@ char mode;
 // for mode 1
 char morseInputArray[4] = {'.', '\0', '\0', '\0'};
 int morseInputArraySize = 1;
+int millis;
+int start;
+int delays[5];
+char code[5];
+int res = 0;
 
 	// for speaker
 int beepArraySize = 44;
@@ -109,6 +117,8 @@ static void MX_DMA_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_DAC1_Init(void);
 static void MX_TIM2_Init(void);
+static void MX_ADC1_Init(void);
+static void MX_TIM5_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -128,6 +138,15 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) { // page 391 HAL driver manual
 			printf("Taking letter input from terminal, outputting Morse. \n\r");
 			printf("Press the spacebar to end current translation. \n\r");
 		}
+	}
+}
+
+/**
+ * Interrupt method to increment the counter at every millisecond
+ */
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
+	if (htim == &htim5) {
+		millis++;
 	}
 }
 
@@ -385,6 +404,87 @@ char getLetterFromMorse(char *morseArray, int morseArraySize) {
 	return nullChar;
 }
 
+/**
+ * Calculate the corresponding letter associated with the code
+ */
+void calcMorseArray() {
+	// Clear the code array
+	for (int i = 0; i < 5; i++) code[i] = '\000';
+
+	// Translate the delays into the appropriate symbols (i.e. '.', '-')
+	for (int i = 0; i < 5; i++) {
+		if (delays[i] == 0) break;
+
+		if (delays[i] >= 300) code[i] = '-';
+		if (delays[i] < 300) code[i] = '.';
+	}
+}
+
+/**
+ * Wait for the ADC input to be pressed returns 0 when pressed or 1 when timeouts
+ */
+int waitForADCPress(int i) {
+	while (1) {
+		HAL_ADC_Start(&hadc1);
+		if (HAL_ADC_PollForConversion(&hadc1, 1000) == HAL_OK) {
+			if (HAL_ADC_GetValue(&hadc1) <= 1000) {
+				HAL_ADC_Stop(&hadc1);
+				return 0;
+			}
+			if (i > 0 && millis - (start + delays[i - 1]) >= 2000) {
+				HAL_ADC_Stop(&hadc1);
+				return 1;
+			}
+		}
+		HAL_ADC_Stop(&hadc1);
+	}
+}
+
+/**
+ * Wait for the ADC input to be released
+ */
+void waitForADCRelease() {
+	while (1) {
+		HAL_ADC_Start(&hadc1);
+		if (HAL_ADC_PollForConversion(&hadc1, 1000) == HAL_OK) {
+			if (HAL_ADC_GetValue(&hadc1) > 1000) {
+				HAL_ADC_Stop(&hadc1);
+				return;
+			}
+		}
+		HAL_ADC_Stop(&hadc1);
+	}
+}
+
+/**
+ * Wait for the user to input up to 5 signals
+ * returns the size of the input Morse
+ */
+int getMorseInput() {
+	// Start the timer at 0 ms
+	millis = 0;
+	HAL_TIM_Base_Start_IT(&htim5);
+
+	// Clear the delay array
+	for (int i = 0; i < 5; i++) delays[i] = 0;
+
+	// Ask for up to 5 signals (i < 6 because return is in the next iteration)
+	for (int i = 0; i < 6; i++) {
+		// Wait while the button is not pressed
+		if (waitForADCPress(i) == 1) {
+			calcMorseArray();
+			return i;
+		}
+		HAL_Delay(10);
+		start = millis;
+
+		// Wait until the button is released
+		waitForADCRelease();
+		HAL_Delay(10);
+		delays[i] = millis - start;
+	}
+}
+
 /* USER CODE END 0 */
 
 /**
@@ -440,6 +540,8 @@ notSpace = 1; // 1 is true
   MX_USART1_UART_Init();
   MX_DAC1_Init();
   MX_TIM2_Init();
+  MX_ADC1_Init();
+  MX_TIM5_Init();
   /* USER CODE BEGIN 2 */
 
   //HAL_DACEx_SelfCalibrate(&hdac1, &sConfigGlobal, DAC1_CHANNEL_1);
@@ -477,25 +579,30 @@ notSpace = 1; // 1 is true
 	  }
 
 	  if (mode == 1) { // taking input of array for Morse letter, displaying letter to terminal
-		  // reset input stuff
-		  notSpace = 1;
-		  morseInputArraySize = 0;
-		  morseInputArray[0] = '\0'; morseInputArray[1] = '\0'; morseInputArray[2] = '\0'; morseInputArray[3] = '\0';
-		  // get user input until space input
-		  printf("\n\rInput Morse (. and - with a space at the end)\n\r");
-		  while (notSpace == 1) {
-			  scanf("%c", &inputChar);
-			  if (inputChar == 32) {
-				  printf("\n\rSpace Inputed\n\r");
-				  notSpace = 0;
-				  break;
-			  }
-			  printf(" You entered: %c\n\r", inputChar);
-			  morseInputArray[morseInputArraySize] = inputChar;
-			  morseInputArraySize = morseInputArraySize+1;
-		  }
+//		  // reset input stuff
+//		  notSpace = 1;
+//		  morseInputArraySize = 0;
+//		  morseInputArray[0] = '\0'; morseInputArray[1] = '\0'; morseInputArray[2] = '\0'; morseInputArray[3] = '\0';
+//		  // get user input until space input
+//		  printf("\n\rInput Morse (. and - with a space at the end)\n\r");
+//		  while (notSpace == 1) {
+//			  scanf("%c", &inputChar);
+//			  if (inputChar == 32) {
+//				  printf("\n\rSpace Inputed\n\r");
+//				  notSpace = 0;
+//				  break;
+//			  }
+//			  printf(" You entered: %c\n\r", inputChar);
+//			  morseInputArray[morseInputArraySize] = inputChar;
+//			  morseInputArraySize = morseInputArraySize+1;
+//		  }
+		  // get morse input from ADC
+		  printf("\n\rInput Morse using the analog stick (wait 2 seconds when done)\n\r");
+		  morseInputArraySize = getMorseInput();
+		  printf("\n\rYou entered: %c%c%c%c%c\n\r", code[0], code[1], code[2], code[3], code[4]);
+
 		  // display letter corresponding to input
-		  letterToPrint = getLetterFromMorse(morseInputArray, morseInputArraySize);
+		  letterToPrint = getLetterFromMorse(code, morseInputArraySize);
 		  printf("Letter from  input: %c \n\r", letterToPrint);
 		  HAL_Delay(500);
 	  }
@@ -557,6 +664,65 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+}
+
+/**
+  * @brief ADC1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_ADC1_Init(void)
+{
+
+  /* USER CODE BEGIN ADC1_Init 0 */
+
+  /* USER CODE END ADC1_Init 0 */
+
+  ADC_ChannelConfTypeDef sConfig = {0};
+
+  /* USER CODE BEGIN ADC1_Init 1 */
+
+  /* USER CODE END ADC1_Init 1 */
+
+  /** Common config
+  */
+  hadc1.Instance = ADC1;
+  hadc1.Init.ClockPrescaler = ADC_CLOCK_ASYNC_DIV1;
+  hadc1.Init.Resolution = ADC_RESOLUTION_12B;
+  hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
+  hadc1.Init.ScanConvMode = ADC_SCAN_DISABLE;
+  hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
+  hadc1.Init.LowPowerAutoWait = DISABLE;
+  hadc1.Init.ContinuousConvMode = ENABLE;
+  hadc1.Init.NbrOfConversion = 1;
+  hadc1.Init.DiscontinuousConvMode = DISABLE;
+  hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
+  hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
+  hadc1.Init.DMAContinuousRequests = DISABLE;
+  hadc1.Init.Overrun = ADC_OVR_DATA_PRESERVED;
+  hadc1.Init.OversamplingMode = DISABLE;
+  hadc1.Init.DFSDMConfig = ADC_DFSDM_MODE_ENABLE;
+  if (HAL_ADC_Init(&hadc1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure Regular Channel
+  */
+  sConfig.Channel = ADC_CHANNEL_1;
+  sConfig.Rank = ADC_REGULAR_RANK_1;
+  sConfig.SamplingTime = ADC_SAMPLETIME_2CYCLES_5;
+  sConfig.SingleDiff = ADC_SINGLE_ENDED;
+  sConfig.OffsetNumber = ADC_OFFSET_NONE;
+  sConfig.Offset = 0;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN ADC1_Init 2 */
+
+  /* USER CODE END ADC1_Init 2 */
+
 }
 
 /**
@@ -645,6 +811,51 @@ static void MX_TIM2_Init(void)
   /* USER CODE BEGIN TIM2_Init 2 */
 
   /* USER CODE END TIM2_Init 2 */
+
+}
+
+/**
+  * @brief TIM5 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM5_Init(void)
+{
+
+  /* USER CODE BEGIN TIM5_Init 0 */
+
+  /* USER CODE END TIM5_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM5_Init 1 */
+
+  /* USER CODE END TIM5_Init 1 */
+  htim5.Instance = TIM5;
+  htim5.Init.Prescaler = 0;
+  htim5.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim5.Init.Period = 120000;
+  htim5.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim5.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim5) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim5, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim5, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM5_Init 2 */
+
+  /* USER CODE END TIM5_Init 2 */
 
 }
 
