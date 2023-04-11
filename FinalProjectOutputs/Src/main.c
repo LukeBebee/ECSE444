@@ -18,6 +18,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "cmsis_os.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -25,6 +26,7 @@
 #include <string.h>
 #define ARM_MATH_CM4
 #include "arm_math.h"
+#include "FreeRTOS.h"
 
 /* USER CODE END Includes */
 
@@ -53,6 +55,8 @@ TIM_HandleTypeDef htim5;
 
 UART_HandleTypeDef huart1;
 
+osThreadId letterToMorseHandle;
+osThreadId morseToLetterHandle;
 /* USER CODE BEGIN PV */
 // printf & scanf stuff
 #ifdef __GNUC__
@@ -108,6 +112,11 @@ uint16_t beepArray[44];
 char letterToPrint;
 char notSpace; // 1 is true
 
+
+
+//sprintf
+char buffer[50];
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -119,6 +128,9 @@ static void MX_DAC1_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_TIM5_Init(void);
+void StartLetterToMorse(void const * argument);
+void StartMorseToLetter(void const * argument);
+
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -126,17 +138,21 @@ static void MX_TIM5_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) { // page 391 HAL driver manual
-	printf("Interrupt \n\r");
+	sprintf(buffer, "Interrupt \n\r");
 	if (GPIO_Pin == userButton_Pin) { // verify that only the pin we want is starting this interrupt (good coding practice)
-		printf("Button Pressed. \n\r");
+		sprintf(buffer, "Button Pressed. \n\r");
 		HAL_GPIO_TogglePin(led1_GPIO_Port, led1_Pin);
 		mode = (mode+1)%2;
 		if (mode == 1) {
-			printf("Taking input Morse input (array), displaying letter to terminal. \n\r");
-			printf("Press one more letter to end current translation. \n\r");
+			sprintf(buffer, "Taking input Morse input (array), displaying letter to terminal. \n\r");
+			HAL_UART_Transmit(&huart1, buffer, sizeof(buffer), 10);
+			sprintf(buffer, "Press one more letter to end current translation. \n\r");
+			HAL_UART_Transmit(&huart1, buffer, sizeof(buffer), 10);
 		} else {
-			printf("Taking letter input from terminal, outputting Morse. \n\r");
-			printf("Press the spacebar to end current translation. \n\r");
+			sprintf(buffer, "Taking letter input from terminal, outputting Morse. \n\r");
+			HAL_UART_Transmit(&huart1, buffer, sizeof(buffer), 10);
+			sprintf(buffer, "Press the spacebar to end current translation. \n\r");
+			HAL_UART_Transmit(&huart1, buffer, sizeof(buffer), 10);
 		}
 	}
 }
@@ -144,11 +160,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) { // page 391 HAL driver manual
 /**
  * Interrupt method to increment the counter at every millisecond
  */
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
-	if (htim == &htim5) {
-		millis++;
-	}
-}
+
 
 /**
  * Update global variables for the Morse array based on the inputted letter
@@ -271,10 +283,12 @@ void updateMorseLetter(char letter){
  */
 void printMorseLetter() {
 	if (morseLetter[0] == '\0') {
-		printf(" *space* ");
+		sprintf(buffer, " *space* ");
+		HAL_UART_Transmit(&huart1, buffer, sizeof(buffer), 10);
 	} else {
 		for (int i = 0; i < morseLetterSize; i++){
-			printf("%c", morseLetter[i]);
+			sprintf(buffer, "%c", morseLetter[i]);
+			HAL_UART_Transmit(&huart1, buffer, sizeof(buffer), 10);
 		}
 	}
 }
@@ -302,7 +316,8 @@ void playMorseToSpeaker(char *morseArray, int morseArraySize) {
 			return;
 		}
 	}
-	printf("\n\r");
+	sprintf(buffer, "\n\r");
+	HAL_UART_Transmit(&huart1, buffer, sizeof(buffer), 10);
 }
 
 /**
@@ -554,60 +569,98 @@ notSpace = 1; // 1 is true
 	  beepArray[i] = (arm_sin_f32(2*PI*i/beepArraySize)+1)*(1365); // 1365 multiplier as 4095 max output, max sine output of 2, scale down to 2/3 to reduce distortion (4095/2)*(2/3)
   }
 
+  sprintf(buffer, "Welcome to the Morse code translator!\n\r");
+  HAL_UART_Transmit(&huart1, buffer, sizeof(buffer), 10);
+  sprintf(buffer, "Operating system starting now.\n\r");
+  HAL_UART_Transmit(&huart1, buffer, sizeof(buffer), 10);
 
   /* USER CODE END 2 */
 
+  /* USER CODE BEGIN RTOS_MUTEX */
+  /* add mutexes, ... */
+  /* USER CODE END RTOS_MUTEX */
+
+  /* USER CODE BEGIN RTOS_SEMAPHORES */
+  /* add semaphores, ... */
+  /* USER CODE END RTOS_SEMAPHORES */
+
+  /* USER CODE BEGIN RTOS_TIMERS */
+  /* start timers, add new ones, ... */
+  /* USER CODE END RTOS_TIMERS */
+
+  /* USER CODE BEGIN RTOS_QUEUES */
+  /* add queues, ... */
+  /* USER CODE END RTOS_QUEUES */
+
+  /* Create the thread(s) */
+  /* definition and creation of letterToMorse */
+  osThreadDef(letterToMorse, StartLetterToMorse, osPriorityNormal, 0, 128);
+  letterToMorseHandle = osThreadCreate(osThread(letterToMorse), NULL);
+
+  /* definition and creation of morseToLetter */
+  osThreadDef(morseToLetter, StartMorseToLetter, osPriorityNormal, 0, 128);
+  morseToLetterHandle = osThreadCreate(osThread(morseToLetter), NULL);
+
+  /* USER CODE BEGIN RTOS_THREADS */
+  /* add threads, ... */
+  /* USER CODE END RTOS_THREADS */
+
+  /* Start scheduler */
+  osKernelStart();
+
+  /* We should never get here as control is now taken by the scheduler */
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  if (mode == 0) { // taking input from terminal, outputting Morse code
-		  // get character from user
-		  printf("Input a character: ");
-		  scanf("%c", &inputChar);
-		  printf("\n\rYou entered: %c \n\r", inputChar); // print character
-		  //printf("ASCII Character: %d \n\r", inputChar); // print ASCII value
+//	  if (mode == 0) { // taking input from terminal, outputting Morse code
+//		  // get character from user
+//		  sprintf(buffer, "Input a character: ");
+//		  sscanf(buffer, "%c", &inputChar);
+//		  sprintf(buffer, "\n\rYou entered: %c \n\r", inputChar); // print character
+//		  //sprintf(buffer, "ASCII Character: %d \n\r", inputChar); // print ASCII value
+//
+//		  // Update, display, and play the Morse letter
+//		  updateMorseLetter(inputChar);
+//		  sprintf(buffer, "Morse Translation: ");
+//		  printMorseLetter();
+//		  sprintf(buffer, "\n\r");
+//		  playMorseToSpeaker(morseLetter, morseLetterSize);
+//		  HAL_Delay(1000);
+//
+//	  }
+//
+//	  if (mode == 1) { // taking input of array for Morse letter, displaying letter to terminal
+////		  // reset input stuff
+////		  notSpace = 1;
+////		  morseInputArraySize = 0;
+////		  morseInputArray[0] = '\0'; morseInputArray[1] = '\0'; morseInputArray[2] = '\0'; morseInputArray[3] = '\0';
+////		  // get user input until space input
+////		  sprintf(buffer, "\n\rInput Morse (. and - with a space at the end)\n\r");
+////		  while (notSpace == 1) {
+////			  sscanf(buffer, "%c", &inputChar);
+////			  if (inputChar == 32) {
+////				  sprintf(buffer, "\n\rSpace Inputed\n\r");
+////				  notSpace = 0;
+////				  break;
+////			  }
+////			  sprintf(buffer, " You entered: %c\n\r", inputChar);
+////			  morseInputArray[morseInputArraySize] = inputChar;
+////			  morseInputArraySize = morseInputArraySize+1;
+////		  }
+//		  // get morse input from ADC
+//		  sprintf(buffer, "\n\rInput Morse using the analog stick (wait 2 seconds when done)\n\r");
+//		  morseInputArraySize = getMorseInput();
+//		  sprintf(buffer, "\n\rYou entered: %c%c%c%c%c\n\r", code[0], code[1], code[2], code[3], code[4]);
+//
+//		  // display letter corresponding to input
+//		  letterToPrint = getLetterFromMorse(code, morseInputArraySize);
+//		  sprintf(buffer, "Letter from  input: %c \n\r", letterToPrint);
+//		  HAL_Delay(500);
+//	  }
 
-		  // Update, display, and play the Morse letter
-		  updateMorseLetter(inputChar);
-		  printf("Morse Translation: ");
-		  printMorseLetter();
-		  printf("\n\r");
-		  playMorseToSpeaker(morseLetter, morseLetterSize);
-		  HAL_Delay(1000);
-
-	  }
-
-	  if (mode == 1) { // taking input of array for Morse letter, displaying letter to terminal
-//		  // reset input stuff
-//		  notSpace = 1;
-//		  morseInputArraySize = 0;
-//		  morseInputArray[0] = '\0'; morseInputArray[1] = '\0'; morseInputArray[2] = '\0'; morseInputArray[3] = '\0';
-//		  // get user input until space input
-//		  printf("\n\rInput Morse (. and - with a space at the end)\n\r");
-//		  while (notSpace == 1) {
-//			  scanf("%c", &inputChar);
-//			  if (inputChar == 32) {
-//				  printf("\n\rSpace Inputed\n\r");
-//				  notSpace = 0;
-//				  break;
-//			  }
-//			  printf(" You entered: %c\n\r", inputChar);
-//			  morseInputArray[morseInputArraySize] = inputChar;
-//			  morseInputArraySize = morseInputArraySize+1;
-//		  }
-		  // get morse input from ADC
-		  printf("\n\rInput Morse using the analog stick (wait 2 seconds when done)\n\r");
-		  morseInputArraySize = getMorseInput();
-		  printf("\n\rYou entered: %c%c%c%c%c\n\r", code[0], code[1], code[2], code[3], code[4]);
-
-		  // display letter corresponding to input
-		  letterToPrint = getLetterFromMorse(code, morseInputArraySize);
-		  printf("Letter from  input: %c \n\r", letterToPrint);
-		  HAL_Delay(500);
-	  }
-
-
+	  sprintf(buffer, "Not in OS\n\r");
+	  HAL_UART_Transmit(&huart1, buffer, sizeof(buffer), 10);
 
     /* USER CODE END WHILE */
 
@@ -693,7 +746,7 @@ static void MX_ADC1_Init(void)
   hadc1.Init.ScanConvMode = ADC_SCAN_DISABLE;
   hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
   hadc1.Init.LowPowerAutoWait = DISABLE;
-  hadc1.Init.ContinuousConvMode = ENABLE;
+  hadc1.Init.ContinuousConvMode = DISABLE;
   hadc1.Init.NbrOfConversion = 1;
   hadc1.Init.DiscontinuousConvMode = DISABLE;
   hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
@@ -919,7 +972,7 @@ static void MX_DMA_Init(void)
 
   /* DMA interrupt init */
   /* DMA1_Channel1_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA1_Channel1_IRQn, 0, 0);
+  HAL_NVIC_SetPriority(DMA1_Channel1_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(DMA1_Channel1_IRQn);
 
 }
@@ -965,7 +1018,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_Init(led1_GPIO_Port, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
-  HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
+  HAL_NVIC_SetPriority(EXTI15_10_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
 
 }
@@ -973,6 +1026,109 @@ static void MX_GPIO_Init(void)
 /* USER CODE BEGIN 4 */
 
 /* USER CODE END 4 */
+
+/* USER CODE BEGIN Header_StartLetterToMorse */
+/**
+  * @brief  Function implementing the letterToMorse thread.
+  * @param  argument: Not used
+  * @retval None
+  */
+/* USER CODE END Header_StartLetterToMorse */
+void StartLetterToMorse(void const * argument)
+{
+  /* USER CODE BEGIN 5 */
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1);
+
+    // get character from user
+    sprintf(buffer, "Input a character: ");
+    HAL_UART_Transmit(&huart1, buffer, sizeof(buffer), 10);
+    sscanf(buffer, "%c", &inputChar);
+    sprintf(buffer, "\n\rYou entered: %c \n\r", inputChar); // print character
+    HAL_UART_Transmit(&huart1, buffer, sizeof(buffer), 10);
+    //sprintf(buffer, "ASCII Character: %d \n\r", inputChar); // print ASCII value
+
+    // Update, display, and play the Morse letter
+    updateMorseLetter(inputChar);
+    sprintf(buffer, "Morse Translation: ");
+    HAL_UART_Transmit(&huart1, buffer, sizeof(buffer), 10);
+    printMorseLetter();
+    sprintf(buffer, "\n\r");
+    HAL_UART_Transmit(&huart1, buffer, sizeof(buffer), 10);
+    playMorseToSpeaker(morseLetter, morseLetterSize);
+    osDelay(1000);
+  }
+  /* USER CODE END 5 */
+}
+
+/* USER CODE BEGIN Header_StartMorseToLetter */
+/**
+* @brief Function implementing the morseToLetter thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartMorseToLetter */
+void StartMorseToLetter(void const * argument)
+{
+  /* USER CODE BEGIN StartMorseToLetter */
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1);
+
+    // reset input stuff
+    notSpace = 1;
+    morseInputArraySize = 0;
+    morseInputArray[0] = '\0'; morseInputArray[1] = '\0'; morseInputArray[2] = '\0'; morseInputArray[3] = '\0';
+    // get user input until space input
+    sprintf(buffer, "\n\rInput Morse (. and - with a space at the end)\n\r");
+    HAL_UART_Transmit(&huart1, buffer, sizeof(buffer), 10);
+    while (notSpace == 1) {
+   	  	sscanf(buffer, "%c", &inputChar);
+   	  	if (inputChar == 32) {
+   		  	sprintf(buffer, "\n\rSpace Inputed\n\r");
+   		 HAL_UART_Transmit(&huart1, buffer, sizeof(buffer), 10);
+   		  	notSpace = 0;
+   		  	break;
+   	  	}
+   	  	sprintf(buffer, " You entered: %c\n\r", inputChar);
+   	  	HAL_UART_Transmit(&huart1, buffer, sizeof(buffer), 10);
+   	  	morseInputArray[morseInputArraySize] = inputChar;
+   	  	morseInputArraySize = morseInputArraySize+1;
+   	  	// print letter
+   	  	letterToPrint = getLetterFromMorse(morseInputArray, morseInputArraySize);
+   	 	sprintf(buffer, "Letter from  input: %c \n\r", letterToPrint);
+   	 	HAL_UART_Transmit(&huart1, buffer, sizeof(buffer), 10);
+   	 	osDelay(500);
+    }
+  }
+  /* USER CODE END StartMorseToLetter */
+}
+
+/**
+  * @brief  Period elapsed callback in non blocking mode
+  * @note   This function is called  when TIM6 interrupt took place, inside
+  * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
+  * a global variable "uwTick" used as application time base.
+  * @param  htim : TIM handle
+  * @retval None
+  */
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+  /* USER CODE BEGIN Callback 0 */
+	if (htim == &htim5) {
+		millis++;
+	}
+  /* USER CODE END Callback 0 */
+  if (htim->Instance == TIM6) {
+    HAL_IncTick();
+  }
+  /* USER CODE BEGIN Callback 1 */
+
+  /* USER CODE END Callback 1 */
+}
 
 /**
   * @brief  This function is executed in case of error occurrence.
@@ -983,6 +1139,8 @@ void Error_Handler(void)
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
   __disable_irq();
+  sprintf(buffer, "Error\n\r");
+  HAL_UART_Transmit(&huart1, buffer, sizeof(buffer), 10);
   while (1)
   {
   }
@@ -1001,7 +1159,7 @@ void assert_failed(uint8_t *file, uint32_t line)
 {
   /* USER CODE BEGIN 6 */
   /* User can add his own implementation to report the file name and line number,
-     ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
+     ex: sprintf(buffer, "Wrong parameters value: file %s on line %d\r\n", file, line) */
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */
