@@ -49,6 +49,8 @@ ADC_HandleTypeDef hadc1;
 DAC_HandleTypeDef hdac1;
 DMA_HandleTypeDef hdma_dac1_ch1;
 
+I2C_HandleTypeDef hi2c2;
+
 TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim5;
 
@@ -109,6 +111,8 @@ uint16_t beepArray[44];
 char letterToPrint;
 char notSpace; // 1 is true
 
+float gyro_read[3];
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -120,6 +124,7 @@ static void MX_DAC1_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_TIM5_Init(void);
+static void MX_I2C2_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -130,15 +135,15 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) { // page 391 HAL driver manual
 	printf("Interrupt \n\r");
 	if (GPIO_Pin == userButton_Pin) { // verify that only the pin we want is starting this interrupt (good coding practice)
 		printf("Button Pressed. \n\r");
-		HAL_GPIO_TogglePin(led1_GPIO_Port, led1_Pin);
-		mode = (mode+1)%2;
-		if (mode == 1) {
-			printf("Taking input Morse input (array), displaying letter to terminal. \n\r");
-			printf("Press one more letter to end current translation. \n\r");
-		} else {
-			printf("Taking letter input from terminal, outputting Morse. \n\r");
-			printf("Press the spacebar to end current translation. \n\r");
-		}
+//		HAL_GPIO_TogglePin(led1_GPIO_Port, led1_Pin);
+//		mode = (mode+1)%2;
+//		if (mode == 1) {
+//			printf("Taking input Morse input (array), displaying letter to terminal. \n\r");
+//			printf("Press one more letter to end current translation. \n\r");
+//		} else {
+//			printf("Taking letter input from terminal, outputting Morse. \n\r");
+//			printf("Press the spacebar to end current translation. \n\r");
+//		}
 	}
 }
 
@@ -544,8 +549,9 @@ notSpace = 1; // 1 is true
   MX_TIM2_Init();
   MX_ADC1_Init();
   MX_TIM5_Init();
+  MX_I2C2_Init();
   /* USER CODE BEGIN 2 */
-
+  BSP_GYRO_Init();		// Gyroscope
   //HAL_DACEx_SelfCalibrate(&hdac1, &sConfigGlobal, DAC1_CHANNEL_1);
   HAL_TIM_Base_Start_IT(&htim2);
 
@@ -556,6 +562,10 @@ notSpace = 1; // 1 is true
 	  beepArray[i] = (arm_sin_f32(2*PI*i/beepArraySize)+1)*(1365); // 1365 multiplier as 4095 max output, max sine output of 2, scale down to 2/3 to reduce distortion (4095/2)*(2/3)
   }
 
+  // calibrate gyro
+  float gyroCalibration[3];
+  BSP_GYRO_GetXYZ(&gyroCalibration);
+  int shakeValue = 4000;
 
   /* USER CODE END 2 */
 
@@ -563,6 +573,17 @@ notSpace = 1; // 1 is true
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  // mode selection
+	  printf("Shake for a new mode!\n\r");
+	  HAL_Delay(750);
+	  BSP_GYRO_GetXYZ(&gyro_read);
+	  if (gyro_read[0]-gyroCalibration[0] > shakeValue || gyro_read[1]-gyroCalibration[1] > shakeValue || gyro_read[2]-gyroCalibration[2] > shakeValue) {
+		  printf("Shake detected! New mode.\n\r");
+		  mode = (mode+1)%2;
+	  } else {
+		  printf("No shake detected, same mode.");
+	  }
+	  HAL_Delay(1000);
 	  if (mode == 0) { // taking input from terminal, outputting Morse code
 		  // get character from user
 		  printf("Input a character: ");
@@ -776,6 +797,54 @@ static void MX_DAC1_Init(void)
   /* USER CODE BEGIN DAC1_Init 2 */
 
   /* USER CODE END DAC1_Init 2 */
+
+}
+
+/**
+  * @brief I2C2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_I2C2_Init(void)
+{
+
+  /* USER CODE BEGIN I2C2_Init 0 */
+
+  /* USER CODE END I2C2_Init 0 */
+
+  /* USER CODE BEGIN I2C2_Init 1 */
+
+  /* USER CODE END I2C2_Init 1 */
+  hi2c2.Instance = I2C2;
+  hi2c2.Init.Timing = 0x307075B1;
+  hi2c2.Init.OwnAddress1 = 0;
+  hi2c2.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+  hi2c2.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
+  hi2c2.Init.OwnAddress2 = 0;
+  hi2c2.Init.OwnAddress2Masks = I2C_OA2_NOMASK;
+  hi2c2.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
+  hi2c2.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
+  if (HAL_I2C_Init(&hi2c2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure Analogue filter
+  */
+  if (HAL_I2CEx_ConfigAnalogFilter(&hi2c2, I2C_ANALOGFILTER_ENABLE) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure Digital filter
+  */
+  if (HAL_I2CEx_ConfigDigitalFilter(&hi2c2, 0) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN I2C2_Init 2 */
+
+  /* USER CODE END I2C2_Init 2 */
 
 }
 
