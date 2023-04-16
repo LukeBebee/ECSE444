@@ -504,9 +504,14 @@ int main(void)
 	 * mode 0 for taking input from terminal, outputting Morse code
 	 * mode 1 for taking input of array for Morse letter, displaying letter to terminal
 	 */
-mode = 0;
-char ADC = 0;
+mode = 0; // no longer used
+char ADC = 1; // 0 if no ADC connected, 1 if ADC connected
 
+/*
+ * Wiring instructions
+ * D7 -> speaker -> resistor -> GND
+ * *Insert ADC wiring*
+ */
 
 morseInputArray[0] = '\0';
 morseInputArray[1] = '\0';
@@ -567,23 +572,34 @@ notSpace = 1; // 1 is true
   BSP_GYRO_GetXYZ(&gyroCalibration);
   int shakeValue = 4000;
 
+  printf("Welcome to the Morse code translator!\n\r");
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+
 	  // mode selection
 	  printf("Shake for a new mode!\n\r");
-	  HAL_Delay(750);
+	  HAL_Delay(1750);
 	  BSP_GYRO_GetXYZ(&gyro_read);
 	  if (gyro_read[0]-gyroCalibration[0] > shakeValue || gyro_read[1]-gyroCalibration[1] > shakeValue || gyro_read[2]-gyroCalibration[2] > shakeValue) {
 		  printf("Shake detected! New mode.\n\r");
 		  mode = (mode+1)%2;
 	  } else {
-		  printf("No shake detected, same mode.");
+		  printf("No shake detected, same mode.\n\r");
 	  }
+
+	  if (mode == 1) {
+	  			printf("Taking input Morse input (array), displaying letter to terminal. \n\r");
+	  		} else {
+	  			printf("Taking letter input from terminal, outputting Morse. \n\r");
+	  		}
+
 	  HAL_Delay(1000);
+
 	  if (mode == 0) { // taking input from terminal, outputting Morse code
 		  // get character from user
 		  printf("Input a character: ");
